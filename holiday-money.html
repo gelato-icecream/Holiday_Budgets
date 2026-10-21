@@ -296,6 +296,106 @@
   .tz-box .tz-time { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 3px; }
   .tz-box .tz-sub { font-size: .72rem; color: var(--muted); }
   .tz-hint { font-size: .76rem; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+
+  /* ---------- Subtabs (Bought vs To-Buy) ---------- */
+  .subnav {
+    display: flex; background: var(--input); border: 1px solid var(--border);
+    border-radius: 14px; padding: 4px; margin-bottom: 14px; gap: 4px;
+  }
+  .subnav-btn {
+    flex: 1; padding: 9px 12px; border: none; border-radius: 10px;
+    background: transparent; color: var(--muted); font-size: .9rem; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .subnav-btn.active {
+    background: var(--card); color: var(--accent); box-shadow: var(--shadow);
+  }
+  .subnav-badge {
+    background: var(--accent-soft); color: var(--accent); font-size: .72rem;
+    padding: 2px 7px; border-radius: 999px; font-weight: 800; min-width: 18px; text-align: center;
+  }
+  .subnav-btn.active .subnav-badge {
+    background: var(--accent); color: #fff;
+  }
+
+  /* ---------- To-Buy list items ---------- */
+  .tobuy-list { list-style: none; margin: 0; padding: 0; }
+  .tobuy-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 10px;
+    border-radius: 14px; background: var(--card); border: 1px solid var(--border);
+    margin-bottom: 8px; box-shadow: var(--shadow); transition: all .2s;
+  }
+  .tobuy-item.ticked {
+    opacity: .65; background: var(--input);
+  }
+  .tobuy-item .line-through {
+    text-decoration: line-through; color: var(--muted);
+  }
+  .tobuy-check-btn {
+    flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--card); color: #fff;
+    display: grid; place-items: center; font-size: .9rem; font-weight: 900;
+    cursor: pointer; transition: all .2s; padding: 0;
+  }
+  .tobuy-check-btn:hover { border-color: var(--accent); }
+  .tobuy-item.ticked .tobuy-check-btn {
+    background: var(--good); border-color: var(--good);
+  }
+  .tobuy-buy-btn {
+    padding: 6px 11px; font-size: .8rem; white-space: nowrap; border-radius: 999px;
+    background: var(--accent); color: #fff; border: none; cursor: pointer; font-weight: 700;
+  }
+  .tobuy-buy-btn:active { transform: scale(.96); }
+
+  /* ---------- Autocomplete suggestions dropdown ---------- */
+  .tobuy-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60;
+    background: var(--card); border: 1.5px solid var(--accent); border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25); max-height: 220px;
+    overflow-y: auto; overflow-x: hidden;
+  }
+  .tobuy-dropdown-header {
+    padding: 7px 12px; font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--accent); background: var(--accent-soft);
+    border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;
+  }
+  .tobuy-dropdown-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+  .tobuy-dropdown-item:last-child { border-bottom: none; }
+  .tobuy-dropdown-item:hover, .tobuy-dropdown-item:active { background: var(--input); }
+  .tobuy-dropdown-name { font-weight: 700; font-size: .92rem; color: var(--text); }
+  .tobuy-dropdown-meta { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+  .tobuy-dropdown-badge {
+    font-size: .72rem; padding: 3px 8px; border-radius: 6px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 700; white-space: nowrap;
+  }
+
+  /* ---------- Quantity steppers & Mode toggle ---------- */
+  .qty-stepper {
+    display: flex; align-items: center; border: 1px solid var(--border);
+    border-radius: 12px; background: var(--input); overflow: hidden; min-height: 46px;
+  }
+  .qty-stepper input {
+    border: none; background: transparent; width: 100%; min-height: 44px;
+    text-align: center; font-weight: 800; font-size: 1.05rem; padding: 0 2px;
+  }
+  .qty-stepper input:focus { outline: none; }
+  .qty-btn {
+    border: none; background: transparent; color: var(--accent);
+    font-size: 1.25rem; font-weight: 800; width: 34px; height: 44px; flex: 0 0 34px;
+    display: grid; place-items: center; cursor: pointer; user-select: none;
+    transition: background .15s;
+  }
+  .qty-btn:active { background: var(--accent-soft); }
+  .mode-toggle-btn {
+    background: var(--input); border: 1px solid var(--border); border-radius: 999px;
+    color: var(--accent); font-size: .72rem; font-weight: 700; padding: 2px 8px;
+    cursor: pointer; transition: all .15s;
+  }
+  .mode-toggle-btn:hover { background: var(--accent-soft); }
 </style>
 </head>
 <body data-tab="">
@@ -410,16 +510,79 @@
       <div id="budgetGroups"></div>
     </section>
 
-    <!-- ================= SPEND ================= -->
+    <!-- ================= SPEND / BOUGHT & TO-BUY ================= -->
     <section class="page" id="page-spend">
-      <div class="locked" id="spendLocked"></div>
-      <div class="toolbar">
-        <div class="grow" id="spendTotal">Spent: 0</div>
-        <button class="tb-btn" id="newGroupBtn">＋ Group</button>
-        <button class="tb-btn" id="selectBtn">Select</button>
+      <div class="subnav" id="spendSubnav">
+        <button class="subnav-btn active" id="subtabBoughtBtn" type="button">
+          <span>🛍️ Bought</span>
+          <span class="subnav-badge" id="subnavBoughtBadge">0</span>
+        </button>
+        <button class="subnav-btn" id="subtabToBuyBtn" type="button">
+          <span>📝 To-Buy</span>
+          <span class="subnav-badge" id="subnavToBuyBadge">0</span>
+        </button>
       </div>
-      <p class="muted" style="margin:-4px 2px 10px">Hold <b>⠿</b> to drag purchases between groups. Tap a purchase to edit.</p>
-      <div id="spendGroups"></div>
+
+      <!-- VIEW 1: Bought list -->
+      <div id="viewBought">
+        <div class="locked" id="spendLocked"></div>
+        <div class="toolbar">
+          <div class="grow" id="spendTotal">Spent: 0</div>
+          <button class="tb-btn" id="newGroupBtn">＋ Group</button>
+          <button class="tb-btn" id="selectBtn">Select</button>
+        </div>
+        <p class="muted" style="margin:-4px 2px 10px">Hold <b>⠿</b> to drag purchases between groups. Tap a purchase to edit.</p>
+        <div id="spendGroups"></div>
+      </div>
+
+      <!-- VIEW 2: To-Buy list -->
+      <div id="viewToBuy" style="display:none">
+        <div class="card">
+          <h2>📝 Add to To-Buy list</h2>
+          <p class="muted" style="margin:-6px 0 12px">Record items you want to buy anytime. When you type their name in purchases, they'll be suggested and ticked off automatically!</p>
+          <label for="toBuyName">Item name</label>
+          <input id="toBuyName" placeholder="e.g. Matcha KitKat, Tokyo Banana, Kimono" enterkeyhint="next">
+          <div class="row">
+            <div style="flex: 0 0 95px;">
+              <label for="toBuyQty">Qty</label>
+              <div class="qty-stepper">
+                <button type="button" class="qty-btn" id="toBuyQtyMinus">−</button>
+                <input id="toBuyQty" type="number" inputmode="numeric" min="1" value="1">
+                <button type="button" class="qty-btn" id="toBuyQtyPlus">＋</button>
+              </div>
+            </div>
+            <div style="flex: 1;">
+              <label for="toBuyPrice">Est. price each</label>
+              <input id="toBuyPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" enterkeyhint="done">
+            </div>
+            <div style="flex: 1;">
+              <label for="toBuyCurrency">Currency</label>
+              <select class="field" id="toBuyCurrency"></select>
+            </div>
+          </div>
+          <div style="margin-top:8px">
+            <label for="toBuyCat">Category</label>
+            <select class="field" id="toBuyCat">
+              <option value="shopping">🛍️ Shopping</option>
+              <option value="food">🍜 Food &amp; Drink</option>
+              <option value="gifts">🎁 Gifts</option>
+              <option value="fun">🎢 Activities</option>
+              <option value="transport">🚆 Transport</option>
+              <option value="stay">🏨 Accommodation</option>
+              <option value="other">📦 Other</option>
+            </select>
+          </div>
+          <button class="btn" id="addToBuyBtn" type="button" style="margin-top:14px">+ Add to To-Buy list</button>
+        </div>
+
+        <div class="toolbar">
+          <div class="grow" id="toBuyStats">0 items to buy</div>
+          <button class="tb-btn on" id="toBuyFilterAll">All</button>
+          <button class="tb-btn" id="clearTickedToBuyBtn" style="color:var(--danger)">Clear ticked</button>
+        </div>
+
+        <div id="toBuyListContainer"></div>
+      </div>
     </section>
 
     <!-- ================= CONVERT ================= -->
@@ -529,10 +692,30 @@
   <div id="barcodeTag"></div>
   <div id="photoPreview"></div>
   <label for="fDesc">Item bought</label>
-  <input id="fDesc" placeholder="e.g. Ramen in Shibuya" enterkeyhint="next">
+  <div style="position:relative">
+    <input id="fDesc" placeholder="e.g. Ramen in Shibuya" enterkeyhint="next" autocomplete="off">
+    <div id="toBuySuggestions" class="tobuy-dropdown" style="display:none"></div>
+  </div>
   <div class="row">
-    <div><label for="fAmount">Amount</label><input id="fAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
-    <div><label for="fCurrency">Currency</label><select class="field" id="fCurrency"></select></div>
+    <div style="flex: 0 0 100px;">
+      <label for="fQty">Qty</label>
+      <div class="qty-stepper">
+        <button type="button" class="qty-btn" id="fQtyMinus">−</button>
+        <input id="fQty" type="number" inputmode="numeric" min="1" value="1">
+        <button type="button" class="qty-btn" id="fQtyPlus">＋</button>
+      </div>
+    </div>
+    <div style="flex: 1;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <label for="fAmount" id="fAmountLbl" style="margin:10px 0 4px">Price each</label>
+        <button type="button" class="mode-toggle-btn" id="fModeToggle" title="Toggle price each vs total">Each ⇄ Total</button>
+      </div>
+      <input id="fAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+    </div>
+    <div style="flex: 1;">
+      <label for="fCurrency">Currency</label>
+      <select class="field" id="fCurrency"></select>
+    </div>
   </div>
   <div id="fConverted" class="muted" style="margin-top:6px"></div>
   <div class="row">
@@ -685,6 +868,7 @@ const defaultTrip = () => ({
   funds: [], expenses: [],
   groups: [], collapsed: {}, lastGroup: "",
   fundGroups: [], fundCollapsed: {}, lastFundGroup: "",
+  toBuy: [], spendSubtab: "bought",
   created: Date.now()
 });
 const defaultApp = () => ({
@@ -705,6 +889,8 @@ function loadApp() {
         res.fundGroups = res.fundGroups || [];
         res.fundCollapsed = res.fundCollapsed || {};
         res.lastFundGroup = res.lastFundGroup || "";
+        res.toBuy = res.toBuy || [];
+        res.spendSubtab = res.spendSubtab || "bought";
         (res.funds || []).forEach(f => { f.groupId = f.groupId || ""; });
         return res;
       });
@@ -900,7 +1086,12 @@ function showTab(tab) {
   document.body.dataset.tab = tab;
   document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === "page-" + tab));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === tab));
-  $("appSub").textContent = TAB_NAMES[tab];
+  if (tab === "spend") {
+    const isToBuy = state.spendSubtab === "tobuy";
+    $("appSub").textContent = isToBuy ? "To-Buy Wishlist" : TAB_NAMES[tab];
+  } else {
+    $("appSub").textContent = TAB_NAMES[tab];
+  }
   if (tab !== "spend") setSelectMode(false);
   window.scrollTo(0, 0);
 }
@@ -1095,12 +1286,16 @@ function expenseHTML(e) {
   const dateStr = d.toLocaleDateString(undefined, { timeZone: tz, weekday: "short", day: "numeric", month: "short" });
   const timeStr = d.toLocaleTimeString(undefined, { timeZone: tz, hour: "numeric", minute: "2-digit" });
   const tzBadge = expTz !== (state.timeZone || "local") ? ` (${esc(city)})` : "";
+  const qty = e.qty && e.qty > 1 ? e.qty : 1;
+  const unitPrice = e.unitPrice || (e.amount / qty);
+  const qtyTitleBadge = qty > 1 ? ` <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-weight:800;">×${qty}</span>` : "";
+  const qtySub = qty > 1 ? `<span>${qty} × ${fmt(unitPrice, e.currency)}</span><span class="dot">•</span>` : "";
   return `<li class="exp ${selected.has(e.id) ? "selected" : ""}" data-id="${e.id}">
     <span class="check"></span>
     <div class="thumb" ${photo ? 'data-photo="1"' : ""}>${photo ? `<img src="${photo}" alt="">` : (CAT[e.category] || CAT.other)[0]}</div>
     <div class="li-main">
-      <div class="li-title">${esc(e.desc)}</div>
-      <div class="li-sub">📅 ${dateStr}<span class="dot">•</span>🕒 ${timeStr}${tzBadge}${e.barcode ? '<span class="badge">▮▯▮</span>' : ""}</div>
+      <div class="li-title">${esc(e.desc)}${qtyTitleBadge}</div>
+      <div class="li-sub">${qtySub}📅 ${dateStr}<span class="dot">•</span>🕒 ${timeStr}${tzBadge}${e.barcode ? '<span class="badge">▮▯▮</span>' : ""}</div>
     </div>
     <div class="li-amt" style="color:var(--accent-2)">−${fmt(e.amount, e.currency)}
       ${e.currency !== cur ? `<small>≈ ${fmt(convert(e.amount, e.currency, cur), cur)}</small>` : ""}</div>
@@ -1130,13 +1325,204 @@ function renderSpendList() {
   }).join("");
 }
 
+/* =========================================================
+   To-Buy Wishlist & Autocomplete
+   ========================================================= */
+let toBuyFilter = "all";
+let selectedToBuyId = null;
+
+function switchSpendSubtab(subtab) {
+  if (!state) return;
+  state.spendSubtab = subtab;
+  save();
+  const isBought = subtab === "bought";
+  if ($("subtabBoughtBtn")) $("subtabBoughtBtn").classList.toggle("active", isBought);
+  if ($("subtabToBuyBtn")) $("subtabToBuyBtn").classList.toggle("active", !isBought);
+  if ($("viewBought")) $("viewBought").style.display = isBought ? "block" : "none";
+  if ($("viewToBuy")) $("viewToBuy").style.display = isBought ? "none" : "block";
+  if (state.tab === "spend") {
+    $("appSub").textContent = isBought ? "What I bought" : "To-Buy Wishlist";
+  }
+  if (!isBought) setSelectMode(false);
+  renderLock();
+  renderToBuy();
+}
+
+function renderSubnavBadges() {
+  if (!state) return;
+  state.toBuy = state.toBuy || [];
+  const boughtCount = (state.expenses || []).length;
+  const toBuyPending = state.toBuy.filter(x => !x.ticked).length;
+  const toBuyTotal = state.toBuy.length;
+  if ($("subnavBoughtBadge")) $("subnavBoughtBadge").textContent = boughtCount;
+  if ($("subnavToBuyBadge")) $("subnavToBuyBadge").textContent = toBuyPending > 0 ? toBuyPending : toBuyTotal;
+}
+
+function renderToBuyItemHTML(item) {
+  const catInfo = CAT[item.cat] || CAT.shopping;
+  const qty = item.qty && item.qty > 1 ? item.qty : 1;
+  const qtyBadge = qty > 1 ? ` <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-weight:800;">×${qty}</span>` : "";
+  const estSub = item.price > 0
+    ? `<span>Est: ${qty > 1 ? `${qty} × ${fmt(item.price, item.currency || state.spendCurrency)} = ` : ""}${fmt(item.price * qty, item.currency || state.spendCurrency)}</span><span class="dot">•</span>`
+    : "";
+  return `
+    <li class="tobuy-item ${item.ticked ? 'ticked' : ''}" data-id="${item.id}">
+      <button class="tobuy-check-btn" data-action="toggle-tick" aria-label="${item.ticked ? 'Mark unticked' : 'Mark ticked'}">
+        ${item.ticked ? '✓' : ''}
+      </button>
+      <div class="thumb">${catInfo[0]}</div>
+      <div class="li-main">
+        <div class="li-title ${item.ticked ? 'line-through' : ''}">${esc(item.name)}${qtyBadge}</div>
+        <div class="li-sub">
+          ${estSub}
+          <span>${catInfo[1]}</span>
+          ${item.ticked ? '<span class="badge" style="background:var(--good);color:#fff">Bought ✓</span>' : ''}
+        </div>
+      </div>
+      ${!item.ticked ? `<button class="tobuy-buy-btn" data-action="quick-buy" title="Record purchase now">＋ Buy</button>` : ''}
+      <button class="del" data-action="edit" title="Edit item name" aria-label="Edit" style="padding:6px; font-size:.95rem;">✏️</button>
+      <button class="del" data-action="delete" title="Delete item" aria-label="Delete" style="padding:6px;">✕</button>
+    </li>
+  `;
+}
+
+function renderToBuy() {
+  const box = $("toBuyListContainer");
+  if (!box || !state) return;
+  state.toBuy = state.toBuy || [];
+  renderSubnavBadges();
+
+  const total = state.toBuy.length;
+  const pending = state.toBuy.filter(x => !x.ticked).length;
+  const completed = total - pending;
+
+  if ($("toBuyStats")) $("toBuyStats").textContent = `${pending} to buy • ${completed} ticked`;
+
+  if (total === 0) {
+    box.innerHTML = `<div class="card empty">📝 Your To-Buy list is empty.<br>Add items above anytime to remember what you want to buy!</div>`;
+    return;
+  }
+
+  let itemsToShow = state.toBuy;
+  if (toBuyFilter === "pending") {
+    itemsToShow = state.toBuy.filter(x => !x.ticked);
+  }
+
+  if (itemsToShow.length === 0 && toBuyFilter === "pending") {
+    box.innerHTML = `<div class="card empty">🎉 All items ticked off!<br>Tap <b>All</b> above to see your completed items.</div>`;
+    return;
+  }
+
+  const unticked = itemsToShow.filter(x => !x.ticked);
+  const ticked = itemsToShow.filter(x => x.ticked);
+
+  let html = "";
+  if (unticked.length > 0) {
+    html += `<ul class="tobuy-list">` + unticked.map(renderToBuyItemHTML).join("") + `</ul>`;
+  }
+
+  if (ticked.length > 0 && toBuyFilter === "all") {
+    html += `
+      <div style="margin: 18px 4px 8px; font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); display:flex; justify-content:space-between; align-items:center;">
+        <span>✅ Ticked / Bought (${ticked.length})</span>
+      </div>
+      <ul class="tobuy-list">` + ticked.map(renderToBuyItemHTML).join("") + `</ul>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function openExpenseSheetForToBuy(item) {
+  if (holidayStatus() !== "active") {
+    toast(holidayStatus() === "over" ? "Your holiday has ended" : "🔒 Start your holiday first (Home tab)");
+    return;
+  }
+  openExpenseSheet();
+  selectedToBuyId = item.id;
+  $("fDesc").value = item.name;
+  if ($("fQty")) $("fQty").value = item.qty || 1;
+  fPriceMode = "each";
+  if ($("fAmountLbl")) $("fAmountLbl").textContent = (item.qty && item.qty > 1) ? "Price each" : "Amount";
+  if (item.price > 0) $("fAmount").value = item.price;
+  if (item.currency) $("fCurrency").value = item.currency;
+  if (item.cat) $("fCat").value = item.cat;
+  updateConverted();
+  setTimeout(() => $("fAmount").focus(), 300);
+}
+
+function editToBuyItem(id) {
+  const item = (state.toBuy || []).find(x => x.id === id);
+  if (!item) return;
+  promptSheet("Edit item name", "Item name", item.name, newName => {
+    item.name = newName;
+    save(); renderAll(); toast("✏️ Item updated");
+  });
+}
+
+function renderToBuySuggestionsHTML(matches) {
+  return `
+    <div class="tobuy-dropdown-header">
+      <span>💡 From To-Buy List</span>
+      <span>${matches.length} found</span>
+    </div>` +
+    matches.slice(0, 6).map(item => {
+      const qty = item.qty && item.qty > 1 ? item.qty : 1;
+      const qtyBadge = qty > 1 ? ` <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-weight:800;">×${qty}</span>` : "";
+      const priceText = item.price > 0
+        ? (qty > 1 ? ` • Est: ${qty} × ${fmt(item.price, item.currency || state.spendCurrency)} = ${fmt(item.price * qty, item.currency || state.spendCurrency)}` : ` • Est: ${fmt(item.price, item.currency || state.spendCurrency)}`)
+        : "";
+      return `
+      <div class="tobuy-dropdown-item" data-tobuy-id="${item.id}">
+        <div style="flex:1; min-width:0;">
+          <div class="tobuy-dropdown-name">${esc(item.name)}${qtyBadge}</div>
+          <div class="tobuy-dropdown-meta">
+            ${(CAT[item.cat] || CAT.shopping)[0]} ${(CAT[item.cat] || CAT.shopping)[1]}
+            ${priceText}
+          </div>
+        </div>
+        <span class="tobuy-dropdown-badge" style="${item.ticked ? 'background:var(--input);color:var(--muted)' : ''}">
+          ${item.ticked ? 'Already ticked ✓' : '+ Select'}
+        </span>
+      </div>`;
+    }).join("");
+}
+
+function getToBuyMatches(val) {
+  if (!val || !state || !state.toBuy || !state.toBuy.length) return [];
+  return state.toBuy.filter(item => {
+    const name = (item.name || "").trim().toLowerCase();
+    return name.startsWith(val) || (val.length >= 2 && name.includes(val));
+  }).sort((a, b) => {
+    if (a.ticked !== b.ticked) return a.ticked ? 1 : -1;
+    const aStart = (a.name || "").trim().toLowerCase().startsWith(val);
+    const bStart = (b.name || "").trim().toLowerCase().startsWith(val);
+    if (aStart !== bStart) return aStart ? -1 : 1;
+    return (a.name || "").localeCompare(b.name || "");
+  });
+}
+
+function updateToBuySuggestions() {
+  const val = ($("fDesc").value || "").trim().toLowerCase();
+  const container = $("toBuySuggestions");
+  if (!container) return;
+  const matches = getToBuyMatches(val);
+  if (!matches.length) {
+    container.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML = renderToBuySuggestionsHTML(matches);
+  container.style.display = "block";
+}
+
 function renderLock() {
   const status = holidayStatus(), active = status === "active";
   $("spendLocked").style.display = active ? "none" : "block";
   $("spendLocked").innerHTML = status === "over"
     ? "✅ Your holiday has ended. Change the end date in Settings to keep adding."
     : "🔒 Adding purchases unlocks when your holiday starts.<br>Go to 🏠 Home and tap <b>Start holiday now</b> to begin early.";
-  $("fab").classList.toggle("disabled", !active);
+  const onToBuy = state && state.spendSubtab === "tobuy";
+  $("fab").classList.toggle("disabled", !active && !onToBuy);
   $("startNowBtn").style.display = active ? "none" : "block";
 }
 
@@ -1173,7 +1559,7 @@ function renderAll() {
   }
   $("tripTitle").textContent = state.tripName || "Holiday Money";
   document.title = state.tripName ? `${state.tripName} – Holiday Money` : "Holiday Money";
-  renderSummary(); renderFunds(); renderSpendList(); renderLock(); renderConverter(); renderStorageInfo();
+  renderSummary(); renderFunds(); renderSpendList(); renderToBuy(); renderSubnavBadges(); renderLock(); renderConverter(); renderStorageInfo();
 }
 
 /* =========================================================
@@ -1295,6 +1681,8 @@ function openTrip(id) {
   state.fundGroups = state.fundGroups || [];
   state.fundCollapsed = state.fundCollapsed || {};
   state.lastFundGroup = state.lastFundGroup || "";
+  state.toBuy = state.toBuy || [];
+  state.spendSubtab = state.spendSubtab || "bought";
   (state.funds || []).forEach(f => { f.groupId = f.groupId || ""; });
   app.currentTripId = id;
   save();
@@ -1305,6 +1693,7 @@ function openTrip(id) {
   fillCurrencySelect($("sfCurrency"), state.displayCurrency);
   fillFundGroupSelect($("fundGroup"), state.lastFundGroup);
   fillCurrencySelect($("fCurrency"), state.spendCurrency);
+  fillCurrencySelect($("toBuyCurrency"), state.spendCurrency || state.displayCurrency);
   fillCurrencySelect($("convFrom"), state.convFrom);
   fillCurrencySelect($("convTo"), state.convTo);
   fillTzSelect($("homeTzSelect"), state.timeZone || "local", true);
@@ -1316,6 +1705,7 @@ function openTrip(id) {
   $("endDate").value = state.endDate;
   renderTzHint(state.timeZone, state.startDate, state.startTz || state.timeZone, state.endDate, state.endTz || state.timeZone, $("settingsTzHint"));
   lastStatus = null;
+  switchSpendSubtab(state.spendSubtab || "bought");
   showTab(state.tab || "home");
   renderAll();
   tick();
@@ -1439,6 +1829,8 @@ function updateExpTzHint() {
   $("fTzHint").innerHTML = parts.length ? parts.join(" • ") : `Recorded in <b>${esc(city)}</b> time`;
 }
 
+let fPriceMode = "each";
+
 function openExpenseSheet(id = null) {
   const e = id ? state.expenses.find(x => x.id === id) : null;
   if (!e && holidayStatus() !== "active") {
@@ -1446,9 +1838,17 @@ function openExpenseSheet(id = null) {
     return;
   }
   editingId = e ? e.id : null;
+  selectedToBuyId = null;
+  fPriceMode = "each";
+  if ($("fAmountLbl")) $("fAmountLbl").textContent = "Price each";
+  if ($("fModeToggle")) $("fModeToggle").textContent = "Each ⇄ Total";
+  if ($("toBuySuggestions")) $("toBuySuggestions").style.display = "none";
   $("expSheetTitle").textContent = e ? "Edit purchase" : "New purchase";
   $("fDesc").value = e ? e.desc : "";
-  $("fAmount").value = e ? e.amount : "";
+  const qty = e ? (e.qty && e.qty > 1 ? e.qty : 1) : 1;
+  $("fQty").value = qty;
+  const unitPrice = e ? (e.unitPrice || (e.amount / qty)) : "";
+  $("fAmount").value = unitPrice !== "" ? unitPrice : "";
   $("fCurrency").value = e ? e.currency : state.spendCurrency;
   $("fCat").value = e ? e.category : "food";
   const ts = e ? e.date : Date.now();
@@ -1480,11 +1880,45 @@ function renderSheetExtras() {
 }
 
 function updateConverted() {
-  const amt = parseFloat($("fAmount").value), from = $("fCurrency").value, to = state.displayCurrency;
-  $("fConverted").textContent = amt > 0 && from !== to ? `≈ ${fmt(convert(amt, from, to), to)}` : "";
+  const entered = parseFloat($("fAmount").value) || 0;
+  const qty = Math.max(1, parseInt($("fQty")?.value) || 1);
+  const from = $("fCurrency").value, to = state.displayCurrency;
+  const unitPrice = fPriceMode === "total" ? (qty > 0 ? entered / qty : entered) : entered;
+  const total = fPriceMode === "total" ? entered : entered * qty;
+  if (!(total > 0)) {
+    $("fConverted").textContent = "";
+    return;
+  }
+  const convertedTotal = convert(total, from, to);
+  let text = "";
+  if (qty > 1) {
+    text = `<b>Total:</b> ${fmt(total, from)} ≈ ${fmt(convertedTotal, to)} <span style="opacity:.8">(${fmt(unitPrice, from)} each)</span>`;
+  } else {
+    text = from !== to ? `≈ ${fmt(convertedTotal, to)}` : "";
+  }
+  $("fConverted").innerHTML = text;
 }
 $("fAmount").oninput = updateConverted;
 $("fCurrency").onchange = updateConverted;
+
+$("fQtyMinus").onclick = () => {
+  const cur = Math.max(1, (parseInt($("fQty").value) || 1) - 1);
+  $("fQty").value = cur;
+  updateConverted();
+};
+$("fQtyPlus").onclick = () => {
+  const cur = (parseInt($("fQty").value) || 1) + 1;
+  $("fQty").value = cur;
+  updateConverted();
+};
+$("fQty").oninput = updateConverted;
+
+$("fModeToggle").onclick = () => {
+  fPriceMode = fPriceMode === "each" ? "total" : "each";
+  $("fAmountLbl").textContent = fPriceMode === "each" ? "Price each" : "Total price";
+  $("fModeToggle").textContent = fPriceMode === "each" ? "Each ⇄ Total" : "Total ⇄ Each";
+  updateConverted();
+};
 
 $("fGroup").onchange = e => {
   if (e.target.value !== "__new") return;
@@ -1497,12 +1931,15 @@ $("fGroup").onchange = e => {
 };
 
 $("fSave").onclick = async () => {
-  const desc = $("fDesc").value.trim(), amount = parseFloat($("fAmount").value);
+  const desc = $("fDesc").value.trim(), enteredAmount = parseFloat($("fAmount").value);
   if (!desc) return toast("What did you buy?");
-  if (!(amount > 0)) return toast("Please enter an amount");
+  if (!(enteredAmount > 0)) return toast("Please enter an amount");
+  const qty = Math.max(1, parseInt($("fQty")?.value) || 1);
+  const unitPrice = fPriceMode === "total" ? enteredAmount / qty : enteredAmount;
+  const amount = fPriceMode === "total" ? enteredAmount : enteredAmount * qty;
   const chosenTz = $("fTz").value || state.timeZone || "local";
   const data = {
-    desc, amount, currency: $("fCurrency").value, category: $("fCat").value,
+    desc, qty, unitPrice, amount, currency: $("fCurrency").value, category: $("fCat").value,
     date: fromInputs($("fDate").value, $("fTime").value, chosenTz),
     tz: chosenTz,
     groupId: $("fGroup").value === "__new" ? "" : $("fGroup").value, barcode: sheetBarcode
@@ -1519,9 +1956,40 @@ $("fSave").onclick = async () => {
   }
   if (sheetBarcode) app.barcodes[sheetBarcode] = { desc, amount, currency: data.currency, category: data.category };
   state.spendCurrency = data.currency; state.lastGroup = data.groupId;
+
+  // Auto-tick matching item in To-Buy list
+  let matchedToBuy = null;
+  if (state.toBuy && state.toBuy.length) {
+    if (selectedToBuyId) {
+      matchedToBuy = state.toBuy.find(x => x.id === selectedToBuyId);
+    }
+    const descLower = desc.toLowerCase();
+    if (!matchedToBuy) {
+      matchedToBuy = state.toBuy.find(x => !x.ticked && x.name.trim().toLowerCase() === descLower)
+        || state.toBuy.find(x => x.name.trim().toLowerCase() === descLower);
+    }
+    if (!matchedToBuy) {
+      matchedToBuy = state.toBuy.find(x => !x.ticked && (
+        descLower.startsWith(x.name.trim().toLowerCase()) ||
+        x.name.trim().toLowerCase().startsWith(descLower)
+      ));
+    }
+    if (matchedToBuy && !matchedToBuy.ticked) {
+      matchedToBuy.ticked = true;
+      matchedToBuy.boughtExpenseId = e.id;
+      matchedToBuy.tickedAt = Date.now();
+    }
+  }
+
   save(); closeSheets(); renderAll();
   const { left } = totals();
-  toast(editingId ? "✏️ Purchase updated" : (left < 0 ? "⚠️ Saved – you're over budget!" : `✅ Saved – ${fmt(left, state.displayCurrency)} left`));
+  if (editingId) {
+    toast("✏️ Purchase updated");
+  } else if (matchedToBuy && matchedToBuy.ticked) {
+    toast(`✅ Saved – ticked "${matchedToBuy.name}" in To-Buy list!`);
+  } else {
+    toast(left < 0 ? "⚠️ Saved – you're over budget!" : `✅ Saved – ${fmt(left, state.displayCurrency)} left`);
+  }
 };
 
 $("fDelete").onclick = () => {
@@ -1529,6 +1997,39 @@ $("fDelete").onclick = () => {
   deleteExpenses([editingId]); closeSheets();
 };
 $("fDesc").onkeydown = e => { if (e.key === "Enter") $("fAmount").focus(); };
+$("fDesc").oninput = () => { updateToBuySuggestions(); };
+$("fDesc").onfocus = () => { if ($("fDesc").value.trim()) updateToBuySuggestions(); };
+
+$("toBuySuggestions").onclick = e => {
+  const itemEl = e.target.closest("[data-tobuy-id]");
+  if (!itemEl) return;
+  const id = itemEl.dataset.tobuyId;
+  const item = (state.toBuy || []).find(x => x.id === id);
+  if (!item) return;
+
+  selectedToBuyId = item.id;
+  $("fDesc").value = item.name;
+  if ($("fQty")) $("fQty").value = item.qty || 1;
+  if (item.price > 0 && !$("fAmount").value) {
+    $("fAmount").value = item.price;
+  }
+  if (item.currency) {
+    $("fCurrency").value = item.currency;
+  }
+  if (item.cat) {
+    $("fCat").value = item.cat;
+  }
+  updateConverted();
+  $("toBuySuggestions").style.display = "none";
+  $("fAmount").focus();
+  toast(`💡 Selected "${item.name}" from To-Buy list`);
+};
+
+document.addEventListener("click", e => {
+  if ($("toBuySuggestions") && !e.target.closest("#fDesc") && !e.target.closest("#toBuySuggestions")) {
+    $("toBuySuggestions").style.display = "none";
+  }
+});
 
 function deleteExpenses(ids) {
   const set = new Set(ids);
@@ -2167,7 +2668,109 @@ $("sfDelete").onclick = () => {
   save(); closeSheets(); renderAll(); toast("🗑 Budget deleted");
 };
 
-$("fab").onclick = () => openExpenseSheet();
+$("fab").onclick = () => {
+  if (state && state.tab === "spend" && state.spendSubtab === "tobuy") {
+    $("toBuyName").focus();
+    $("toBuyName").scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  openExpenseSheet();
+};
+
+$("subtabBoughtBtn").onclick = () => switchSpendSubtab("bought");
+$("subtabToBuyBtn").onclick = () => switchSpendSubtab("tobuy");
+
+$("addToBuyBtn").onclick = () => {
+  if (!state) return;
+  const name = $("toBuyName").value.trim();
+  if (!name) return toast("What do you want to buy?");
+  const qty = Math.max(1, parseInt($("toBuyQty")?.value) || 1);
+  const price = parseFloat($("toBuyPrice").value) || 0;
+  const currency = $("toBuyCurrency").value || state.spendCurrency || state.displayCurrency;
+  const cat = $("toBuyCat").value || "shopping";
+
+  state.toBuy = state.toBuy || [];
+  state.toBuy.unshift({
+    id: uid(),
+    name,
+    qty,
+    price,
+    currency,
+    cat,
+    ticked: false,
+    created: Date.now()
+  });
+
+  $("toBuyName").value = "";
+  if ($("toBuyQty")) $("toBuyQty").value = "1";
+  $("toBuyPrice").value = "";
+  save();
+  renderAll();
+  toast(`📝 Added "${name}"${qty > 1 ? ` (×${qty})` : ""} to To-Buy list`);
+};
+
+$("toBuyQtyMinus").onclick = () => {
+  $("toBuyQty").value = Math.max(1, (parseInt($("toBuyQty").value) || 1) - 1);
+};
+$("toBuyQtyPlus").onclick = () => {
+  $("toBuyQty").value = (parseInt($("toBuyQty").value) || 1) + 1;
+};
+
+$("toBuyName").onkeydown = e => {
+  if (e.key === "Enter") {
+    if ($("toBuyPrice").value) $("addToBuyBtn").click();
+    else $("toBuyPrice").focus();
+  }
+};
+$("toBuyPrice").onkeydown = e => {
+  if (e.key === "Enter") $("addToBuyBtn").click();
+};
+
+$("toBuyFilterAll").onclick = () => {
+  toBuyFilter = toBuyFilter === "all" ? "pending" : "all";
+  $("toBuyFilterAll").textContent = toBuyFilter === "all" ? "All" : "Pending";
+  $("toBuyFilterAll").classList.toggle("on", toBuyFilter === "all");
+  renderToBuy();
+};
+
+$("clearTickedToBuyBtn").onclick = () => {
+  if (!state || !state.toBuy) return;
+  const tickedCount = state.toBuy.filter(x => x.ticked).length;
+  if (!tickedCount) return toast("No ticked items to clear");
+  if (!confirm(`Clear ${tickedCount} ticked item(s) from your To-Buy list?`)) return;
+  state.toBuy = state.toBuy.filter(x => !x.ticked);
+  save(); renderAll(); toast("Cleared ticked items");
+};
+
+$("toBuyListContainer").addEventListener("click", e => {
+  const btn = e.target.closest("[data-action]");
+  const li = e.target.closest("li.tobuy-item");
+  if (!li) return;
+  const id = li.dataset.id;
+  const item = (state.toBuy || []).find(x => x.id === id);
+  if (!item) return;
+
+  const action = btn ? btn.dataset.action : "toggle-tick";
+
+  if (action === "toggle-tick") {
+    item.ticked = !item.ticked;
+    if (item.ticked) item.tickedAt = Date.now();
+    save();
+    renderAll();
+    toast(item.ticked ? `✅ "${item.name}" ticked off!` : `◻️ "${item.name}" marked as to buy`);
+  } else if (action === "quick-buy") {
+    openExpenseSheetForToBuy(item);
+  } else if (action === "edit") {
+    editToBuyItem(id);
+  } else if (action === "delete") {
+    if (confirm(`Remove "${item.name}" from your to-buy list?`)) {
+      state.toBuy = state.toBuy.filter(x => x.id !== id);
+      save();
+      renderAll();
+      toast("🗑 Item removed");
+    }
+  }
+});
 
 $("convAmount").oninput = renderConverter;
 $("convChips").onclick = e => { const v = e.target.dataset.chip; if (v) { $("convAmount").value = v; renderConverter(); } };
