@@ -11,6 +11,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎆</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%230ea5a4%22/><text x=%2250%%22 y=%2255%%22 dominant-baseline=%22central%22 text-anchor=%22middle%22 font-size=%2258%22>🎆</text></svg>">
 <title>Holiday Money</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
   :root {
     --bg: #f3f6fb; --card: #ffffff; --text: #1d2433; --muted: #6b7489; --border: #e2e7f0;
@@ -69,10 +70,26 @@
   }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   .row { display: flex; gap: 10px; }
-  .row > * { flex: 1; min-width: 0; }
+  .row > * { flex: 1 1 0; min-width: 0; }
+  .row > .btn { width: auto; margin-top: 0; }
+  .amount-field-wrap { display: flex; gap: 6px; align-items: center; }
+  .amount-field-wrap input { flex: 1; min-width: 0; }
+  .sign-btn {
+    flex: 0 0 46px; width: 46px; height: 46px; border-radius: 12px; border: 1.5px solid var(--border);
+    background: var(--input); color: var(--good); font-weight: 800; font-size: 1.25rem;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+    line-height: 1; transition: background .15s, color .15s, border-color .15s, transform .1s;
+    user-select: none; -webkit-user-select: none;
+  }
+  .sign-btn:active { transform: scale(.94); }
+  .sign-btn.is-neg {
+    background: rgba(225, 29, 72, .14); color: var(--danger); border-color: var(--danger);
+  }
   .btn {
-    display: block; width: 100%; margin-top: 14px; padding: 13px; border: none; border-radius: 12px;
-    background: var(--accent); color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; margin-top: 14px; padding: 12px 8px; border: none; border-radius: 12px;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: .95rem; cursor: pointer;
+    text-align: center; white-space: nowrap; box-sizing: border-box;
   }
   .btn:active { transform: scale(.98); }
   .btn.alt { background: var(--accent-2); }
@@ -186,15 +203,16 @@
   /* ---------- Bottom tab bar ---------- */
   .tabbar {
     position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; max-width: var(--app-w); margin: 0 auto;
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: grid; grid-template-columns: repeat(6, 1fr);
     background: var(--card); border-top: 1px solid var(--border);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    padding: 6px 2px calc(6px + env(safe-area-inset-bottom));
   }
   .tab {
     background: none; border: none; color: var(--muted); display: flex; flex-direction: column;
-    align-items: center; gap: 2px; padding: 6px 0; font-size: .7rem; font-weight: 600; cursor: pointer; border-radius: 12px;
+    align-items: center; gap: 2px; padding: 4px 1px; font-size: .67rem; font-weight: 600; cursor: pointer; border-radius: 10px;
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .tab .ic { font-size: 1.35rem; line-height: 1.2; filter: grayscale(1); opacity: .7; transition: .2s; }
+  .tab .ic { font-size: 1.25rem; line-height: 1.1; filter: grayscale(1); opacity: .7; transition: .2s; }
   .tab.active { color: var(--accent); }
   .tab.active .ic { filter: none; opacity: 1; transform: translateY(-2px); }
 
@@ -249,6 +267,90 @@
   .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 12px; }
   .setting-row:last-child { border-bottom: none; }
   .setting-row select { width: auto; max-width: 60%; }
+
+  /* ---------- Transfer & Sync ---------- */
+  .transfer-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .check-chip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px;
+    border-radius: 999px; background: var(--input); border: 1.5px solid var(--border);
+    font-size: .85rem; font-weight: 600; cursor: pointer; user-select: none;
+    transition: background .2s, border-color .2s, color .2s;
+  }
+  .check-chip.on, .check-chip:has(input:checked) {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+  }
+  .check-chip input { display: none; }
+  .transfer-box {
+    background: var(--input); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+  }
+  #transferQrCode svg, #transferQrCode img { width: 100%; max-width: 200px; height: auto; display: block; margin: 0 auto; border-radius: 6px; }
+  #qrViewerContent svg, #qrViewerContent img { width: 100%; max-width: min(78vw, 300px); height: auto; display: block; margin: 0 auto; border-radius: 8px; }
+
+  /* ---------- Badge imported ---------- */
+  .badge-imported {
+    background: rgba(14, 165, 164, 0.15);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: .68rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background .15s, color .15s, border-color .15s, transform .1s;
+  }
+  .badge-imported:hover {
+    background: rgba(225, 29, 72, 0.14);
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+  .badge-imported:active {
+    transform: scale(.93);
+  }
+  .badge-imported .x {
+    font-size: .72rem;
+    font-weight: 800;
+    opacity: .7;
+    margin-left: 1px;
+  }
+  .badge-imported:hover .x {
+    opacity: 1;
+  }
+  body.theme-dark .badge-imported {
+    background: rgba(45, 212, 191, 0.2);
+    color: #2dd4bf;
+    border-color: #2dd4bf;
+  }
+  body.theme-dark .badge-imported:hover {
+    background: rgba(244, 63, 94, 0.22);
+    color: #fb7185;
+    border-color: #fb7185;
+  }
+
+  /* ---------- Gifts / Others tab ---------- */
+  .gift-card {
+    transition: opacity .2s, border-color .2s;
+  }
+  .gift-card.gift-bought {
+    opacity: .78;
+    background: var(--input);
+  }
+  .gift-check-btn {
+    flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--input); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: .95rem; font-weight: 800; transition: .15s;
+    margin-top: 2px;
+  }
+  .gift-check-btn.bought {
+    background: var(--good); border-color: var(--good);
+  }
 
   /* ---------- Trips home screen ---------- */
   :root { --pending: #f97316; --live: #16a34a; --ended: #8b93a1; }
@@ -492,7 +594,13 @@
         <label for="fundLabel">Where's it from?</label>
         <input id="fundLabel" placeholder="e.g. Savings, Birthday money" enterkeyhint="next">
         <div class="row">
-          <div><label for="fundAmount">Amount</label><input id="fundAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" enterkeyhint="done"></div>
+          <div>
+            <label for="fundAmount">Amount</label>
+            <div class="amount-field-wrap">
+              <button type="button" class="sign-btn" id="fundSignBtn" title="Toggle positive / negative" aria-label="Toggle sign">＋</button>
+              <input id="fundAmount" type="text" inputmode="decimal" placeholder="0.00" enterkeyhint="done">
+            </div>
+          </div>
           <div><label for="fundCurrency">Currency</label><select class="field" id="fundCurrency"></select></div>
         </div>
         <div style="margin-top:8px">
@@ -604,6 +712,61 @@
       </div>
     </section>
 
+    <!-- ================= OTHERS (GIFTS) ================= -->
+    <section class="page" id="page-others">
+      <!-- Summary Card -->
+      <div class="card" id="giftSummaryCard">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h2 style="margin:0">🎁 Gifts for Others</h2>
+          <span class="pill" id="giftProgressPill">0 / 0 bought</span>
+        </div>
+        <p class="muted" style="margin:4px 0 12px">Keep track of souvenirs and gifts to bring back for family and friends.</p>
+        <div class="stats" style="grid-template-columns:1fr 1fr;gap:10px">
+          <div class="stat">
+            <div class="k">PEOPLE LISTED</div>
+            <div class="v" id="giftTotalPeople">0</div>
+          </div>
+          <div class="stat">
+            <div class="k">GIFTS BOUGHT</div>
+            <div class="v" id="giftBoughtCount" style="color:var(--good)">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Person Card -->
+      <div class="card">
+        <h2>👤 Add Person</h2>
+        <label for="giftPersonName">Who are you buying for?</label>
+        <input id="giftPersonName" placeholder="e.g. Mum, Dave, Sarah, Colleague" enterkeyhint="next">
+
+        <label for="giftPersonIdea">Gift ideas / notes</label>
+        <input id="giftPersonIdea" placeholder="e.g. Silk scarf, local sweets, size M hoodie" enterkeyhint="next">
+
+        <div class="row">
+          <div>
+            <label for="giftPersonBudget">Budget (optional)</label>
+            <input id="giftPersonBudget" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" enterkeyhint="done">
+          </div>
+          <div>
+            <label for="giftPersonCur">Currency</label>
+            <select class="field" id="giftPersonCur"></select>
+          </div>
+        </div>
+
+        <button class="btn" id="addGiftPersonBtn" type="button" style="margin-top:12px">＋ Add Person</button>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="toolbar" style="margin-top:6px">
+        <button class="tb-btn on" id="giftFilterAll" type="button">All (<span id="giftCountAll">0</span>)</button>
+        <button class="tb-btn" id="giftFilterPending" type="button">Needs gift (<span id="giftCountPending">0</span>)</button>
+        <button class="tb-btn" id="giftFilterBought" type="button">Bought (<span id="giftCountBought">0</span>)</button>
+      </div>
+
+      <!-- People List Container -->
+      <div id="giftPeopleList"></div>
+    </section>
+
     <!-- ================= SETTINGS ================= -->
     <section class="page" id="page-settings">
       <div class="card">
@@ -624,11 +787,68 @@
         </div>
         <div class="tz-hint" id="settingsTzHint"></div>
       </div>
+
+      <!-- ================= TRANSFER & SYNC ================= -->
+      <div class="card" id="transferCard">
+        <h2>📲 Transfer & Sync (QR & Code)</h2>
+        <p class="muted" style="margin:-4px 0 12px">Share Budget, Bought, and To-Buy tabs with another phone via QR code or text transfer code.</p>
+
+        <label>Choose tabs to transfer:</label>
+        <div class="transfer-chips">
+          <label class="check-chip on"><input type="checkbox" id="xferTabBudget" checked> 💰 Budget</label>
+          <label class="check-chip on"><input type="checkbox" id="xferTabSpend" checked> 🛍️ Bought</label>
+          <label class="check-chip on"><input type="checkbox" id="xferTabToBuy" checked> 📝 To-Buy</label>
+          <label class="check-chip on"><input type="checkbox" id="xferTabGifts" checked> 🎁 Others</label>
+        </div>
+        <div class="muted" id="transferSummary" style="font-size:.78rem;margin-top:6px"></div>
+
+        <!-- Share / Export Section -->
+        <div class="transfer-box" style="margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <b>📤 Share from this phone</b>
+            <button class="tb-btn" id="genTransferBtn" type="button" style="padding:4px 10px;font-size:.8rem">↻ Refresh</button>
+          </div>
+
+          <div id="transferQrWrap" style="text-align:center;padding:12px;background:var(--input);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer">
+            <div id="transferQrCode" style="display:inline-block;padding:8px;background:#fff;border-radius:12px;min-width:180px;min-height:180px;box-shadow:0 2px 8px rgba(0,0,0,.08)"></div>
+            <div id="transferQrMsg" class="muted" style="margin-top:8px;font-size:.78rem">Tap QR to enlarge • Scan with other phone</div>
+            <button type="button" class="tb-btn" id="enlargeQrBtn" style="margin-top:8px;font-size:.8rem;padding:6px 14px">🔍 Enlarge QR Code</button>
+          </div>
+
+          <label for="transferCodeOut" style="margin-top:6px">Transfer Code:</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <input id="transferCodeOut" readonly style="font-family:monospace;font-size:.78rem" placeholder="Generating code…">
+            <button class="tb-btn on" id="copyTransferBtn" type="button" style="flex:0 0 auto;white-space:nowrap">📋 Copy</button>
+          </div>
+        </div>
+
+        <!-- Receive / Import Section -->
+        <div class="transfer-box" style="margin-top:14px">
+          <b>📥 Receive on this phone</b>
+          <p class="muted" style="margin:4px 0 10px;font-size:.78rem">Scan the other phone's QR code or paste a code below.</p>
+          <button class="btn alt" id="scanQrTransferBtn" type="button" style="margin:0 0 10px;padding:12px">📷 Scan QR code with camera</button>
+
+          <label for="transferCodeIn">Or paste transfer code:</label>
+          <textarea id="transferCodeIn" rows="2" placeholder="Paste HM2:... transfer code here" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:monospace;font-size:.8rem;resize:vertical"></textarea>
+
+          <div class="row" style="margin-top:8px">
+            <button class="btn" id="importTransferBtn" type="button" style="margin:0;padding:12px 8px">📥 Import data</button>
+            <button class="btn ghost" id="pasteTransferBtn" type="button" style="margin:0;padding:12px 8px">📋 Paste</button>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <h2>⚙️ App</h2>
         <div class="setting-row"><span>Show totals in</span><select class="field" id="settingsCurrency"></select></div>
         <div class="setting-row"><span>Appearance</span><button class="tb-btn" id="themeBtn2">🌙 Dark</button></div>
         <div class="setting-row"><span>Saved on this device</span><span class="muted" id="storageInfo"></span></div>
+        <div class="setting-row" id="clearTagsRow">
+          <div>
+            <div>Imported tags</div>
+            <div class="muted" id="importedTagsCount" style="font-size:.76rem">0 tags in this trip</div>
+          </div>
+          <button class="tb-btn" id="clearAllTagsBtn" type="button" style="padding:6px 12px;font-size:.82rem">🏷️ Clear all tags</button>
+        </div>
       </div>
       <button class="btn danger" id="resetBtn">🗑 Delete this trip</button>
     </section>
@@ -648,6 +868,7 @@
     <button class="tab" data-tab="budget"><span class="ic">💰</span>Budget</button>
     <button class="tab" data-tab="spend"><span class="ic">🛍️</span>Bought</button>
     <button class="tab" data-tab="convert"><span class="ic">💱</span>Convert</button>
+    <button class="tab" data-tab="others"><span class="ic">🎁</span>Others</button>
     <button class="tab" data-tab="settings"><span class="ic">⚙️</span>Settings</button>
   </nav>
   </div><!-- /tripView -->
@@ -750,13 +971,47 @@
   <label for="sfLabel">Where's it from?</label>
   <input id="sfLabel" placeholder="e.g. Savings, Birthday money" enterkeyhint="next">
   <div class="row">
-    <div><label for="sfAmount">Amount</label><input id="sfAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+    <div>
+      <label for="sfAmount">Amount</label>
+      <div class="amount-field-wrap">
+        <button type="button" class="sign-btn" id="sfSignBtn" title="Toggle positive / negative" aria-label="Toggle sign">＋</button>
+        <input id="sfAmount" type="text" inputmode="decimal" placeholder="0.00">
+      </div>
+    </div>
     <div><label for="sfCurrency">Currency</label><select class="field" id="sfCurrency"></select></div>
   </div>
   <label for="sfGroup">Group</label>
   <select class="field" id="sfGroup"></select>
   <button class="btn alt" id="sfSave">Save budget</button>
   <button class="btn danger" id="sfDelete">Delete budget</button>
+</div>
+
+<!-- Gift recipient sheet (edit) -->
+<div class="sheet" id="giftSheet">
+  <div class="grab"></div>
+  <h3 id="giftSheetTitle">Edit Gift Recipient</h3>
+  <label for="egName">Name</label>
+  <input id="egName" placeholder="Person's name" enterkeyhint="next">
+  <label for="egIdea">Gift ideas / notes</label>
+  <textarea id="egIdea" rows="2" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--input);color:var(--text);font:inherit;font-size:16px;resize:vertical" placeholder="e.g. Silk scarf, local sweets"></textarea>
+  <div class="row">
+    <div>
+      <label for="egBudget">Budget (optional)</label>
+      <input id="egBudget" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+    </div>
+    <div>
+      <label for="egCur">Currency</label>
+      <select class="field" id="egCur"></select>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <label class="check-chip" id="egBoughtChip" style="cursor:pointer;display:inline-flex">
+      <input type="checkbox" id="egBought">
+      <span>🎁 Gift bought</span>
+    </label>
+  </div>
+  <button class="btn alt" id="egSave">Save recipient</button>
+  <button class="btn danger" id="egDelete">Delete recipient</button>
 </div>
 
 <!-- Generic action / prompt sheet -->
@@ -779,6 +1034,18 @@
 
 <!-- Photo viewer -->
 <div class="overlay" id="photoViewer"><img alt="Purchase photo"><p class="scan-msg">Tap to close</p></div>
+
+<!-- QR Viewer Overlay -->
+<div class="overlay" id="qrViewer">
+  <div style="background:#fff;padding:20px;border-radius:20px;max-width:92vw;width:340px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 12px 36px rgba(0,0,0,.5);position:relative">
+    <button type="button" id="qrCloseBtn" style="position:absolute;top:10px;right:10px;background:#eee;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:grid;place-items:center;color:#333">✕</button>
+    <div id="qrViewerContent" style="display:flex;justify-content:center;align-items:center;width:100%;min-height:220px"></div>
+    <div style="color:#111;font-weight:800;font-size:1.05rem;margin-top:14px;text-align:center" id="qrViewerTitle">Transfer QR Code</div>
+    <div style="color:#666;font-size:.82rem;margin-top:4px;text-align:center">Scan with the other phone's camera or scanner</div>
+    <button type="button" class="btn alt" id="qrDoneBtn" style="margin-top:16px;padding:10px 20px;width:auto;font-size:.9rem">Done</button>
+  </div>
+  <p class="scan-msg" style="margin-top:16px">Tap outside to close</p>
+</div>
 
 <div class="toast" id="toast"></div>
 <div id="hiddenReader" style="display:none"></div>
@@ -807,7 +1074,7 @@ const CAT = {
   food: ["🍜", "Food & Drink"], transport: ["🚆", "Transport"], stay: ["🏨", "Accommodation"],
   shopping: ["🛍️", "Shopping"], fun: ["🎢", "Activities"], gifts: ["🎁", "Gifts"], other: ["📦", "Other"]
 };
-const TAB_NAMES = { home: "Home", budget: "Budget", spend: "What I bought", convert: "Converter", settings: "Settings" };
+const TAB_NAMES = { home: "Home", budget: "Budget", spend: "What I bought", convert: "Converter", others: "Gifts for Others", settings: "Settings" };
 
 const TIMEZONES = [
   ["local", "📱 Same as my device", "Your device"],
@@ -869,6 +1136,7 @@ const defaultTrip = () => ({
   groups: [], collapsed: {}, lastGroup: "",
   fundGroups: [], fundCollapsed: {}, lastFundGroup: "",
   toBuy: [], spendSubtab: "bought",
+  giftPeople: [],
   created: Date.now()
 });
 const defaultApp = () => ({
@@ -890,6 +1158,7 @@ function loadApp() {
         res.fundCollapsed = res.fundCollapsed || {};
         res.lastFundGroup = res.lastFundGroup || "";
         res.toBuy = res.toBuy || [];
+        res.giftPeople = res.giftPeople || [];
         res.spendSubtab = res.spendSubtab || "bought";
         (res.funds || []).forEach(f => { f.groupId = f.groupId || ""; });
         return res;
@@ -1090,9 +1359,11 @@ function showTab(tab) {
     const isToBuy = state.spendSubtab === "tobuy";
     $("appSub").textContent = isToBuy ? "To-Buy Wishlist" : TAB_NAMES[tab];
   } else {
-    $("appSub").textContent = TAB_NAMES[tab];
+    $("appSub").textContent = TAB_NAMES[tab] || "Holiday Money";
   }
   if (tab !== "spend") setSelectMode(false);
+  if (tab === "settings") renderTransferUI();
+  if (tab === "others") renderGiftPeople();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => showTab(t.dataset.tab));
@@ -1183,6 +1454,7 @@ function totals() {
 function renderSummary() {
   const cur = state.displayCurrency, { budget, spent, left } = totals();
   $("sBudget").textContent = fmt(budget, cur);
+  $("sBudget").style.color = budget < 0 ? "var(--danger)" : "";
   $("sSpent").textContent = fmt(spent, cur);
   $("sLeft").textContent = fmt(left, cur);
   $("sLeft").style.color = left < 0 ? "var(--danger)" : "var(--good)";
@@ -1199,11 +1471,11 @@ function renderSummary() {
     $("sDailyLbl").textContent = end ? "Per day left" : "Per day (add end date)";
   }
   const pct = budget > 0 ? spent / budget * 100 : 0;
-  $("progressBar").style.width = Math.min(100, pct) + "%";
-  $("progress").classList.toggle("over", pct > 100);
+  $("progressBar").style.width = Math.min(100, Math.max(0, pct)) + "%";
+  $("progress").classList.toggle("over", pct > 100 || (state.funds.length > 0 && budget <= 0 && spent > 0));
   $("progressText").textContent = budget > 0
     ? `${pct.toFixed(1)}% of your budget used${pct > 100 ? " – over budget! 😬" : ""}`
-    : "Add some holiday money in 💰 Budget to get started.";
+    : (state.funds.length ? `${fmt(budget, cur)} total budget${(budget < 0 || spent > 0) ? " – over budget! 😬" : ""}` : "Add some holiday money in 💰 Budget to get started.");
 
   // Category breakdown
   const byCat = {};
@@ -1235,14 +1507,20 @@ function fundHTML(f) {
   const cur = state.displayCurrency;
   const d = new Date(f.date || Date.now());
   const dateStr = d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  const isNeg = (f.amount || 0) < 0;
+  const absAmt = Math.abs(f.amount || 0);
+  const convAmt = convert(absAmt, f.currency, cur);
+  const importedBadge = f.imported
+    ? ` <span class="badge badge-imported" data-tag-type="fund" data-tag-id="${f.id}" title="Click to delete tag" role="button" tabindex="0">📥 Imported <span class="x">✕</span></span>`
+    : "";
   return `<li class="fund" data-id="${f.id}">
-    <div class="thumb">💵</div>
+    <div class="thumb">${isNeg ? "💸" : "💵"}</div>
     <div class="li-main">
-      <div class="li-title">${esc(f.label || "Holiday money")}</div>
+      <div class="li-title">${esc(f.label || (isNeg ? "Budget adjustment" : "Holiday money"))}${importedBadge}</div>
       <div class="li-sub">📅 ${dateStr}</div>
     </div>
-    <div class="li-amt" style="color:var(--good)">+${fmt(f.amount, f.currency)}
-      ${f.currency !== cur ? `<small>≈ ${fmt(convert(f.amount, f.currency, cur), cur)}</small>` : ""}</div>
+    <div class="li-amt" style="color:${isNeg ? "var(--danger)" : "var(--good)"}">${isNeg ? "−" : "+"}${fmt(absAmt, f.currency)}
+      ${f.currency !== cur ? `<small>≈ ${isNeg ? "−" : ""}${fmt(convAmt, cur)}</small>` : ""}</div>
     <div class="handle" aria-label="Drag to move">⠿</div>
   </li>`;
 }
@@ -1289,12 +1567,15 @@ function expenseHTML(e) {
   const qty = e.qty && e.qty > 1 ? e.qty : 1;
   const unitPrice = e.unitPrice || (e.amount / qty);
   const qtyTitleBadge = qty > 1 ? ` <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-weight:800;">×${qty}</span>` : "";
+  const importedBadge = e.imported
+    ? ` <span class="badge badge-imported" data-tag-type="expense" data-tag-id="${e.id}" title="Click to delete tag" role="button" tabindex="0">📥 Imported <span class="x">✕</span></span>`
+    : "";
   const qtySub = qty > 1 ? `<span>${qty} × ${fmt(unitPrice, e.currency)}</span><span class="dot">•</span>` : "";
   return `<li class="exp ${selected.has(e.id) ? "selected" : ""}" data-id="${e.id}">
     <span class="check"></span>
     <div class="thumb" ${photo ? 'data-photo="1"' : ""}>${photo ? `<img src="${photo}" alt="">` : (CAT[e.category] || CAT.other)[0]}</div>
     <div class="li-main">
-      <div class="li-title">${esc(e.desc)}${qtyTitleBadge}</div>
+      <div class="li-title">${esc(e.desc)}${qtyTitleBadge}${importedBadge}</div>
       <div class="li-sub">${qtySub}📅 ${dateStr}<span class="dot">•</span>🕒 ${timeStr}${tzBadge}${e.barcode ? '<span class="badge">▮▯▮</span>' : ""}</div>
     </div>
     <div class="li-amt" style="color:var(--accent-2)">−${fmt(e.amount, e.currency)}
@@ -1362,6 +1643,9 @@ function renderToBuyItemHTML(item) {
   const catInfo = CAT[item.cat] || CAT.shopping;
   const qty = item.qty && item.qty > 1 ? item.qty : 1;
   const qtyBadge = qty > 1 ? ` <span class="badge" style="background:var(--accent-soft);color:var(--accent);font-weight:800;">×${qty}</span>` : "";
+  const importedBadge = item.imported
+    ? ` <span class="badge badge-imported" data-tag-type="tobuy" data-tag-id="${item.id}" title="Click to delete tag" role="button" tabindex="0">📥 Imported <span class="x">✕</span></span>`
+    : "";
   const estSub = item.price > 0
     ? `<span>Est: ${qty > 1 ? `${qty} × ${fmt(item.price, item.currency || state.spendCurrency)} = ` : ""}${fmt(item.price * qty, item.currency || state.spendCurrency)}</span><span class="dot">•</span>`
     : "";
@@ -1372,7 +1656,7 @@ function renderToBuyItemHTML(item) {
       </button>
       <div class="thumb">${catInfo[0]}</div>
       <div class="li-main">
-        <div class="li-title ${item.ticked ? 'line-through' : ''}">${esc(item.name)}${qtyBadge}</div>
+        <div class="li-title ${item.ticked ? 'line-through' : ''}">${esc(item.name)}${qtyBadge}${importedBadge}</div>
         <div class="li-sub">
           ${estSub}
           <span>${catInfo[1]}</span>
@@ -1545,10 +1829,67 @@ function renderTheme() {
   document.querySelector('meta[name="theme-color"]').content = dark ? "#0d121c" : "#0ea5a4";
 }
 
+function getImportedTagsCount() {
+  if (!state) return 0;
+  const fCount = (state.funds || []).filter(f => f.imported).length;
+  const eCount = (state.expenses || []).filter(e => e.imported).length;
+  const tCount = (state.toBuy || []).filter(b => b.imported).length;
+  const gCount = (state.giftPeople || []).filter(p => p.imported).length;
+  return fCount + eCount + tCount + gCount;
+}
+
 function renderStorageInfo() {
   if (!state) return;
   const n = state.expenses.filter(e => photoCache[e.id]).length;
   $("storageInfo").textContent = `${state.expenses.length} purchases • ${n} photo${n === 1 ? "" : "s"}`;
+  const tagCount = getImportedTagsCount();
+  if ($("importedTagsCount")) $("importedTagsCount").textContent = `${tagCount} tag${tagCount === 1 ? "" : "s"} in this trip`;
+  if ($("clearAllTagsBtn")) {
+    $("clearAllTagsBtn").disabled = tagCount === 0;
+    $("clearAllTagsBtn").style.opacity = tagCount === 0 ? ".5" : "1";
+    $("clearAllTagsBtn").style.pointerEvents = tagCount === 0 ? "none" : "auto";
+  }
+}
+
+function clearAllImportedTags() {
+  if (!state) return;
+  const count = getImportedTagsCount();
+  if (count === 0) return toast("No imported tags to clear");
+  if (!confirm(`Clear all ${count} 'Imported' tag(s) from this trip?\n(Your items and amounts will stay, only the tags will be removed)`)) return;
+
+  (state.funds || []).forEach(f => { delete f.imported; });
+  (state.expenses || []).forEach(e => { delete e.imported; });
+  (state.toBuy || []).forEach(b => { delete b.imported; });
+  (state.giftPeople || []).forEach(p => { delete p.imported; });
+
+  save();
+  renderAll();
+  renderTransferUI();
+  toast(`🏷️ Cleared ${count} 'Imported' tag(s)!`);
+}
+
+function deleteImportedTag(type, id) {
+  if (!state) return;
+  let found = false;
+  if (type === "fund") {
+    const item = (state.funds || []).find(x => x.id === id);
+    if (item && item.imported) { delete item.imported; found = true; }
+  } else if (type === "expense") {
+    const item = (state.expenses || []).find(x => x.id === id);
+    if (item && item.imported) { delete item.imported; found = true; }
+  } else if (type === "tobuy") {
+    const item = (state.toBuy || []).find(x => x.id === id);
+    if (item && item.imported) { delete item.imported; found = true; }
+  } else if (type === "gift") {
+    const item = (state.giftPeople || []).find(x => x.id === id);
+    if (item && item.imported) { delete item.imported; found = true; }
+  }
+  if (found) {
+    save();
+    renderAll();
+    renderTransferUI();
+    toast("🏷️ Tag deleted");
+  }
 }
 
 function renderAll() {
@@ -1559,7 +1900,7 @@ function renderAll() {
   }
   $("tripTitle").textContent = state.tripName || "Holiday Money";
   document.title = state.tripName ? `${state.tripName} – Holiday Money` : "Holiday Money";
-  renderSummary(); renderFunds(); renderSpendList(); renderToBuy(); renderSubnavBadges(); renderLock(); renderConverter(); renderStorageInfo();
+  renderSummary(); renderFunds(); renderSpendList(); renderToBuy(); renderSubnavBadges(); renderGiftPeople(); renderLock(); renderConverter(); renderStorageInfo();
 }
 
 /* =========================================================
@@ -1682,6 +2023,7 @@ function openTrip(id) {
   state.fundCollapsed = state.fundCollapsed || {};
   state.lastFundGroup = state.lastFundGroup || "";
   state.toBuy = state.toBuy || [];
+  state.giftPeople = state.giftPeople || [];
   state.spendSubtab = state.spendSubtab || "bought";
   (state.funds || []).forEach(f => { f.groupId = f.groupId || ""; });
   app.currentTripId = id;
@@ -1694,6 +2036,8 @@ function openTrip(id) {
   fillFundGroupSelect($("fundGroup"), state.lastFundGroup);
   fillCurrencySelect($("fCurrency"), state.spendCurrency);
   fillCurrencySelect($("toBuyCurrency"), state.spendCurrency || state.displayCurrency);
+  fillCurrencySelect($("giftPersonCur"), state.spendCurrency || state.displayCurrency);
+  fillCurrencySelect($("egCur"), state.spendCurrency || state.displayCurrency);
   fillCurrencySelect($("convFrom"), state.convFrom);
   fillCurrencySelect($("convTo"), state.convTo);
   fillTzSelect($("homeTzSelect"), state.timeZone || "local", true);
@@ -1708,6 +2052,7 @@ function openTrip(id) {
   switchSpendSubtab(state.spendSubtab || "bought");
   showTab(state.tab || "home");
   renderAll();
+  renderTransferUI();
   tick();
 }
 
@@ -1839,6 +2184,7 @@ function openExpenseSheet(id = null) {
   }
   editingId = e ? e.id : null;
   selectedToBuyId = null;
+  selectedGiftPersonId = null;
   fPriceMode = "each";
   if ($("fAmountLbl")) $("fAmountLbl").textContent = "Price each";
   if ($("fModeToggle")) $("fModeToggle").textContent = "Each ⇄ Total";
@@ -1981,10 +2327,29 @@ $("fSave").onclick = async () => {
     }
   }
 
+  // Auto-mark matching gift recipient in Others list
+  let matchedGift = null;
+  if (state.giftPeople && state.giftPeople.length) {
+    if (selectedGiftPersonId) {
+      matchedGift = state.giftPeople.find(x => x.id === selectedGiftPersonId);
+    }
+    if (!matchedGift) {
+      const descLower = desc.toLowerCase();
+      matchedGift = state.giftPeople.find(x => !x.bought && descLower.includes(x.name.trim().toLowerCase()));
+    }
+    if (matchedGift && !matchedGift.bought) {
+      matchedGift.bought = true;
+      matchedGift.boughtAt = Date.now();
+      matchedGift.expenseId = e.id;
+    }
+  }
+
   save(); closeSheets(); renderAll();
   const { left } = totals();
   if (editingId) {
     toast("✏️ Purchase updated");
+  } else if (matchedGift && matchedGift.bought) {
+    toast(`🎁 Saved – marked gift for "${matchedGift.name}" as bought!`);
   } else if (matchedToBuy && matchedToBuy.ticked) {
     toast(`✅ Saved – ticked "${matchedToBuy.name}" in To-Buy list!`);
   } else {
@@ -2069,7 +2434,11 @@ function viewPhoto(src) { $("photoViewer").querySelector("img").src = src; $("ph
 /* =========================================================
    Barcode scanner (html5-qrcode, loaded only when needed)
    ========================================================= */
-let scanner = null, scanLib = null, scanHandled = false;
+let scanner = null, scanLib = null, scanHandled = false, scannerMode = "barcode";
+function isTransferCode(str) {
+  if (!str) return false;
+  return str.startsWith("HM2:") || str.startsWith("HM1:") || str.includes('"HolidayMoney"') || (str.startsWith("{") && str.includes('"tabs"'));
+}
 function loadScanLib() {
   if (window.Html5Qrcode) return Promise.resolve();
   if (!scanLib) scanLib = new Promise((res, rej) => {
@@ -2090,22 +2459,35 @@ function scannerConfig() {
     experimentalFeatures: { useBarCodeDetectorIfSupported: true }
   };
 }
-async function openScanner() {
+async function openScanner(mode = "barcode") {
+  scannerMode = typeof mode === "string" ? mode : "barcode";
   scanHandled = false;
   $("scanner").classList.add("open");
   $("scanMsg").textContent = "Starting camera…";
   try {
     await loadScanLib();
     if (!scanner) scanner = new Html5Qrcode("reader", scannerConfig());
+    const isTransfer = (scannerMode === "transfer");
     await scanner.start(
       { facingMode: "environment" },
-      { fps: 12, qrbox: (w, h) => ({ width: Math.max(60, Math.floor(Math.min(w * .85, 340))), height: Math.max(60, Math.floor(Math.min(h * .45, 170))) }) },
+      {
+        fps: 15,
+        qrbox: (w, h) => {
+          if (isTransfer) {
+            const s = Math.max(100, Math.floor(Math.min(w * 0.8, h * 0.8, 300)));
+            return { width: s, height: s };
+          }
+          return { width: Math.max(60, Math.floor(Math.min(w * .85, 340))), height: Math.max(60, Math.floor(Math.min(h * .45, 170))) };
+        }
+      },
       onScanSuccess, () => {}
     );
-    $("scanMsg").textContent = "Point the camera at the barcode 📦";
+    $("scanMsg").textContent = isTransfer
+      ? "Point camera at the transfer QR code on the other phone 📱"
+      : "Point the camera at the barcode 📦";
   } catch (err) {
     $("scanMsg").innerHTML = err.message === "offline"
-      ? "⚠️ The scanner needs internet the first time. You can still type the code."
+      ? "⚠️ The scanner needs internet the first time. You can still paste or type the code."
       : "⚠️ Camera not available. Allow camera access, or open this app from an <b>https://</b> web address.<br>You can also use <b>Scan from photo</b>.";
   }
 }
@@ -2118,28 +2500,46 @@ async function onScanSuccess(text) {
   scanHandled = true;
   navigator.vibrate?.(60);
   await closeScanner();
-  handleBarcode(text.trim());
+  const trimmed = text.trim();
+  if (scannerMode === "transfer" || isTransferCode(trimmed)) {
+    handleTransferCode(trimmed);
+  } else {
+    handleBarcode(trimmed);
+  }
 }
-$("scanBtn").onclick = openScanner;
+$("scanBtn").onclick = () => openScanner("barcode");
 $("scanClose").onclick = closeScanner;
 $("scanManual").onclick = async () => {
   await closeScanner();
-  const code = prompt("Type the barcode number");
-  if (code && code.trim()) handleBarcode(code.trim());
+  if (scannerMode === "transfer") {
+    const code = prompt("Paste or type the transfer code (HM2:...):");
+    if (code && code.trim()) handleTransferCode(code.trim());
+  } else {
+    const code = prompt("Type the barcode number");
+    if (code && code.trim()) {
+      if (isTransferCode(code.trim())) handleTransferCode(code.trim());
+      else handleBarcode(code.trim());
+    }
+  }
 };
 $("scanFromPhoto").onclick = async () => { await stopScanner(); $("barcodeFileInput").click(); };
 $("barcodeFileInput").onchange = async e => {
   const file = e.target.files[0]; e.target.value = "";
   if (!file) return;
-  $("scanMsg").textContent = "Reading barcode from photo…";
+  $("scanMsg").textContent = "Reading code from photo…";
   try {
     await loadScanLib();
     const fileScanner = new Html5Qrcode("hiddenReader", scannerConfig());
     const text = await fileScanner.scanFile(file, false);
     $("scanner").classList.remove("open");
-    handleBarcode(text.trim());
+    const trimmed = text.trim();
+    if (scannerMode === "transfer" || isTransferCode(trimmed)) {
+      handleTransferCode(trimmed);
+    } else {
+      handleBarcode(trimmed);
+    }
   } catch {
-    $("scanMsg").textContent = "😕 No barcode found in that photo. Try again closer and in good light.";
+    $("scanMsg").textContent = "😕 No barcode or QR code found in that photo. Try again closer and in good light.";
   }
 };
 
@@ -2238,6 +2638,11 @@ function groupMenu(gid) {
 }
 
 $("spendGroups").addEventListener("click", e => {
+  const tag = e.target.closest(".badge-imported");
+  if (tag) {
+    e.stopPropagation();
+    return deleteImportedTag(tag.dataset.tagType, tag.dataset.tagId);
+  }
   if (e.target.closest(".handle")) return;
   const menu = e.target.closest("[data-group-menu]");
   if (menu) return groupMenu(menu.dataset.groupMenu);
@@ -2479,6 +2884,7 @@ function refreshSettingsTzUI() {
   renderTzHint(state.timeZone, state.startDate, state.startTz || state.timeZone, state.endDate, state.endTz || state.timeZone, $("settingsTzHint"));
   lastStatus = null;
   renderAll();
+  renderTransferUI();
   tick();
 }
 
@@ -2548,6 +2954,52 @@ $("startNowBtn").onclick = () => {
 };
 
 let editingFundId = null;
+function setSignBtn(btnEl, isNeg) {
+  if (!btnEl) return;
+  btnEl.classList.toggle("is-neg", !!isNeg);
+  btnEl.textContent = isNeg ? "−" : "＋";
+}
+function toggleSign(inputEl, btnEl) {
+  const willBeNeg = !btnEl.classList.contains("is-neg");
+  setSignBtn(btnEl, willBeNeg);
+  let val = (inputEl.value || "").trim();
+  if (val) {
+    const raw = val.replace(/[^0-9.-]/g, "");
+    const num = parseFloat(raw);
+    if (!isNaN(num)) {
+      const absVal = Math.abs(num);
+      inputEl.value = willBeNeg ? ("-" + absVal) : String(absVal);
+    } else {
+      inputEl.value = willBeNeg ? ("-" + raw.replace(/^-+/, "")) : raw.replace(/^-+/, "");
+    }
+  } else if (willBeNeg) {
+    inputEl.value = "-";
+  }
+  inputEl.focus();
+}
+function wireSignToggle(inputEl, btnEl) {
+  if (!inputEl || !btnEl) return;
+  btnEl.onclick = () => toggleSign(inputEl, btnEl);
+  inputEl.addEventListener("input", () => {
+    const val = (inputEl.value || "").trim();
+    if (val.startsWith("-")) {
+      setSignBtn(btnEl, true);
+    } else if (val && parseFloat(val) > 0) {
+      setSignBtn(btnEl, false);
+    }
+  });
+}
+function parseAmountInput(inputEl, btnEl) {
+  const raw = (inputEl.value || "").trim().replace(/[^0-9.-]/g, "");
+  let amount = parseFloat(raw);
+  if (isNaN(amount) || amount === 0) return null;
+  if (raw.startsWith("-") || (btnEl && btnEl.classList.contains("is-neg"))) {
+    amount = -Math.abs(amount);
+  } else {
+    amount = Math.abs(amount);
+  }
+  return amount;
+}
 function openFundSheet(id) {
   const f = state.funds.find(x => x.id === id);
   if (!f) return;
@@ -2557,6 +3009,7 @@ function openFundSheet(id) {
   $("sfAmount").value = f.amount || "";
   fillCurrencySelect($("sfCurrency"), f.currency || state.displayCurrency);
   fillFundGroupSelect($("sfGroup"), f.groupId);
+  setSignBtn($("sfSignBtn"), (f.amount || 0) < 0);
   openSheet("fundSheet");
 }
 
@@ -2610,6 +3063,11 @@ $("sfGroup").onchange = e => {
 };
 
 $("budgetGroups").addEventListener("click", e => {
+  const tag = e.target.closest(".badge-imported");
+  if (tag) {
+    e.stopPropagation();
+    return deleteImportedTag(tag.dataset.tagType, tag.dataset.tagId);
+  }
   if (e.target.closest(".handle")) return;
   const menu = e.target.closest("[data-fund-group-menu]");
   if (menu) return fundGroupMenu(menu.dataset.fundGroupMenu);
@@ -2628,12 +3086,12 @@ $("budgetGroups").addEventListener("click", e => {
 
 $("addFundBtn").onclick = () => {
   if (!state) return;
-  const amount = parseFloat($("fundAmount").value);
-  if (!(amount > 0)) return toast("Please enter an amount");
+  const amount = parseAmountInput($("fundAmount"), $("fundSignBtn"));
+  if (amount === null) return toast("Please enter an amount");
   const gid = $("fundGroup").value === "__new" ? "" : $("fundGroup").value;
   state.funds.push({
     id: uid(),
-    label: $("fundLabel").value.trim() || "Holiday money",
+    label: $("fundLabel").value.trim() || (amount < 0 ? "Budget adjustment" : "Holiday money"),
     amount,
     currency: $("fundCurrency").value,
     groupId: gid,
@@ -2641,8 +3099,9 @@ $("addFundBtn").onclick = () => {
   });
   state.lastFundGroup = gid;
   $("fundAmount").value = ""; $("fundLabel").value = "";
+  setSignBtn($("fundSignBtn"), false);
   $("fundAmount").blur();
-  save(); renderAll(); toast("💰 Money added");
+  save(); renderAll(); toast(amount < 0 ? "📉 Budget deduction added" : "💰 Money added");
 };
 $("fundLabel").onkeydown = e => { if (e.key === "Enter") $("fundAmount").focus(); };
 $("fundAmount").onkeydown = e => { if (e.key === "Enter") $("addFundBtn").click(); };
@@ -2651,9 +3110,9 @@ $("sfSave").onclick = () => {
   if (!editingFundId) return;
   const f = state.funds.find(x => x.id === editingFundId);
   if (!f) return;
-  const label = $("sfLabel").value.trim() || "Holiday money";
-  const amount = parseFloat($("sfAmount").value);
-  if (!(amount > 0)) return toast("Please enter an amount");
+  const amount = parseAmountInput($("sfAmount"), $("sfSignBtn"));
+  if (amount === null) return toast("Please enter an amount");
+  const label = $("sfLabel").value.trim() || (amount < 0 ? "Budget adjustment" : "Holiday money");
   f.label = label;
   f.amount = amount;
   f.currency = $("sfCurrency").value;
@@ -2661,6 +3120,11 @@ $("sfSave").onclick = () => {
   state.lastFundGroup = f.groupId;
   save(); closeSheets(); renderAll(); toast("💰 Budget updated");
 };
+$("sfLabel").onkeydown = e => { if (e.key === "Enter") $("sfAmount").focus(); };
+$("sfAmount").onkeydown = e => { if (e.key === "Enter") $("sfSave").click(); };
+
+wireSignToggle($("fundAmount"), $("fundSignBtn"));
+wireSignToggle($("sfAmount"), $("sfSignBtn"));
 
 $("sfDelete").onclick = () => {
   if (!editingFundId || !confirm("Delete this budget item?")) return;
@@ -2743,6 +3207,11 @@ $("clearTickedToBuyBtn").onclick = () => {
 };
 
 $("toBuyListContainer").addEventListener("click", e => {
+  const tag = e.target.closest(".badge-imported");
+  if (tag) {
+    e.stopPropagation();
+    return deleteImportedTag(tag.dataset.tagType, tag.dataset.tagId);
+  }
   const btn = e.target.closest("[data-action]");
   const li = e.target.closest("li.tobuy-item");
   if (!li) return;
@@ -2789,6 +3258,740 @@ $("resetBtn").onclick = () => {
 };
 
 /* =========================================================
+   Others Tab (Gifts for Others)
+   ========================================================= */
+let giftFilter = "all";
+let editingGiftPersonId = null;
+let selectedGiftPersonId = null;
+
+function renderGiftPeople() {
+  const box = $("giftPeopleList");
+  if (!box || !state) return;
+  state.giftPeople = state.giftPeople || [];
+
+  const total = state.giftPeople.length;
+  const bought = state.giftPeople.filter(p => p.bought).length;
+  const pending = total - bought;
+
+  if ($("giftProgressPill")) $("giftProgressPill").textContent = `${bought} / ${total} bought`;
+  if ($("giftTotalPeople")) $("giftTotalPeople").textContent = total;
+  if ($("giftBoughtCount")) $("giftBoughtCount").textContent = bought;
+  if ($("giftCountAll")) $("giftCountAll").textContent = total;
+  if ($("giftCountPending")) $("giftCountPending").textContent = pending;
+  if ($("giftCountBought")) $("giftCountBought").textContent = bought;
+
+  if (total === 0) {
+    box.innerHTML = `<div class="card empty">🎁 No people added yet.<br>Add friends or family above to organize gifts and souvenirs!</div>`;
+    return;
+  }
+
+  let list = state.giftPeople;
+  if (giftFilter === "pending") list = list.filter(p => !p.bought);
+  if (giftFilter === "bought") list = list.filter(p => p.bought);
+
+  if (list.length === 0) {
+    if (giftFilter === "pending") {
+      box.innerHTML = `<div class="card empty">🎉 All gifts bought! Tap <b>All</b> to see your list.</div>`;
+    } else {
+      box.innerHTML = `<div class="card empty">No gifts marked as bought yet. Tap <b>Needs gift</b> to see who is waiting!</div>`;
+    }
+    return;
+  }
+
+  box.innerHTML = list.map(p => {
+    const importedBadge = p.imported
+      ? ` <span class="badge badge-imported" data-tag-type="gift" data-tag-id="${p.id}" title="Click to delete tag" role="button" tabindex="0">📥 Imported <span class="x">✕</span></span>`
+      : "";
+    return `
+      <div class="card gift-card ${p.bought ? 'gift-bought' : ''}" data-id="${p.id}" style="margin-bottom:10px;padding:12px 14px">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <button type="button" class="gift-check-btn ${p.bought ? 'bought' : ''}" data-action="toggle-bought" aria-label="Toggle bought">
+            ${p.bought ? '✓' : ''}
+          </button>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <b style="font-size:1rem;${p.bought ? 'text-decoration:line-through;opacity:.7;' : ''}">${esc(p.name)}</b>
+              ${importedBadge}
+              ${p.bought ? '<span class="badge" style="background:var(--good);color:#fff">Bought ✓</span>' : ''}
+            </div>
+            ${p.idea ? `<div class="muted" style="margin-top:4px;font-size:.85rem;word-break:break-word">💡 ${esc(p.idea)}</div>` : ''}
+            <div class="muted" style="margin-top:6px;font-size:.76rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              ${p.budget > 0 ? `<span>💰 Budget: <b>${fmt(p.budget, p.currency || state.spendCurrency)}</b></span>` : ''}
+              ${p.boughtAt ? `<span>📅 ${new Date(p.boughtAt).toLocaleDateString(undefined, {month:'short',day:'numeric'})}</span>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            ${!p.bought ? `<button class="tobuy-buy-btn" data-action="quick-buy" title="Record purchase now">＋ Buy</button>` : ''}
+            <button class="del" data-action="edit" title="Edit recipient" aria-label="Edit" style="padding:6px;font-size:.95rem">✏️</button>
+            <button class="del" data-action="delete" title="Delete recipient" aria-label="Delete" style="padding:6px">✕</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function openExpenseSheetForGift(person) {
+  if (holidayStatus() !== "active") {
+    toast(holidayStatus() === "over" ? "Your holiday has ended" : "🔒 Start your holiday first (Home tab)");
+    return;
+  }
+  openExpenseSheet();
+  selectedGiftPersonId = person.id;
+  $("fDesc").value = person.idea ? `Gift for ${person.name}: ${person.idea}` : `Gift for ${person.name}`;
+  if ($("fQty")) $("fQty").value = 1;
+  fPriceMode = "each";
+  if ($("fAmountLbl")) $("fAmountLbl").textContent = "Amount";
+  if (person.budget > 0) $("fAmount").value = person.budget;
+  if (person.currency) $("fCurrency").value = person.currency;
+  $("fCat").value = "gifts";
+  updateConverted();
+  setTimeout(() => $("fAmount").focus(), 300);
+}
+
+function openGiftSheet(p) {
+  editingGiftPersonId = p.id;
+  $("egName").value = p.name || "";
+  $("egIdea").value = p.idea || "";
+  $("egBudget").value = p.budget > 0 ? p.budget : "";
+  fillCurrencySelect($("egCur"), p.currency || state.spendCurrency || state.displayCurrency);
+  $("egBought").checked = !!p.bought;
+  $("egBoughtChip")?.classList.toggle("on", !!p.bought);
+  openSheet("giftSheet");
+  setTimeout(() => $("egName").focus(), 300);
+}
+
+function addGiftPerson() {
+  if (!state) return;
+  const name = $("giftPersonName").value.trim();
+  if (!name) return toast("Please enter the person's name");
+  const idea = $("giftPersonIdea").value.trim();
+  const budget = parseFloat($("giftPersonBudget").value) || 0;
+  const cur = $("giftPersonCur").value || state.spendCurrency || state.displayCurrency;
+
+  state.giftPeople = state.giftPeople || [];
+  state.giftPeople.push({
+    id: uid(),
+    name,
+    idea,
+    budget: Math.max(0, budget),
+    currency: cur,
+    bought: false,
+    boughtAt: null,
+    created: Date.now()
+  });
+
+  save();
+  renderGiftPeople();
+  renderTransferUI();
+  $("giftPersonName").value = "";
+  $("giftPersonIdea").value = "";
+  $("giftPersonBudget").value = "";
+  $("giftPersonName").focus();
+  toast(`🎁 Added ${name} to gift list!`);
+}
+
+$("addGiftPersonBtn").onclick = addGiftPerson;
+$("giftPersonName").onkeydown = e => { if (e.key === "Enter") $("giftPersonIdea").focus(); };
+$("giftPersonIdea").onkeydown = e => { if (e.key === "Enter") $("giftPersonBudget").focus(); };
+$("giftPersonBudget").onkeydown = e => { if (e.key === "Enter") addGiftPerson(); };
+
+$("giftFilterAll").onclick = () => {
+  giftFilter = "all";
+  $("giftFilterAll").classList.add("on");
+  $("giftFilterPending").classList.remove("on");
+  $("giftFilterBought").classList.remove("on");
+  renderGiftPeople();
+};
+$("giftFilterPending").onclick = () => {
+  giftFilter = "pending";
+  $("giftFilterAll").classList.remove("on");
+  $("giftFilterPending").classList.add("on");
+  $("giftFilterBought").classList.remove("on");
+  renderGiftPeople();
+};
+$("giftFilterBought").onclick = () => {
+  giftFilter = "bought";
+  $("giftFilterAll").classList.remove("on");
+  $("giftFilterPending").classList.remove("on");
+  $("giftFilterBought").classList.add("on");
+  renderGiftPeople();
+};
+
+$("giftPeopleList").addEventListener("click", e => {
+  const tag = e.target.closest(".badge-imported");
+  if (tag) {
+    e.stopPropagation();
+    return deleteImportedTag(tag.dataset.tagType, tag.dataset.tagId);
+  }
+  const btn = e.target.closest("[data-action]");
+  const card = e.target.closest(".gift-card");
+  if (!card) return;
+  const id = card.dataset.id;
+  const p = (state.giftPeople || []).find(x => x.id === id);
+  if (!p) return;
+
+  const action = btn ? btn.dataset.action : "toggle-bought";
+
+  if (action === "toggle-bought") {
+    p.bought = !p.bought;
+    p.boughtAt = p.bought ? Date.now() : null;
+    save();
+    renderGiftPeople();
+    renderTransferUI();
+    toast(p.bought ? `🎁 Marked gift for ${p.name} as bought!` : `◻️ Gift for ${p.name} marked as needed`);
+  } else if (action === "quick-buy") {
+    openExpenseSheetForGift(p);
+  } else if (action === "edit") {
+    openGiftSheet(p);
+  } else if (action === "delete") {
+    if (confirm(`Remove ${p.name} from your gift list?`)) {
+      state.giftPeople = state.giftPeople.filter(x => x.id !== id);
+      save();
+      renderGiftPeople();
+      renderTransferUI();
+      toast("🗑 Recipient removed");
+    }
+  }
+});
+
+$("egBought").onchange = e => {
+  $("egBoughtChip")?.classList.toggle("on", e.target.checked);
+};
+$("egSave").onclick = () => {
+  if (!editingGiftPersonId || !state) return;
+  const p = (state.giftPeople || []).find(x => x.id === editingGiftPersonId);
+  if (!p) return;
+  const name = $("egName").value.trim();
+  if (!name) return toast("Name cannot be empty");
+  p.name = name;
+  p.idea = $("egIdea").value.trim();
+  p.budget = Math.max(0, parseFloat($("egBudget").value) || 0);
+  p.currency = $("egCur").value || state.spendCurrency || state.displayCurrency;
+  const wasBought = p.bought;
+  p.bought = $("egBought").checked;
+  if (p.bought && !wasBought) p.boughtAt = Date.now();
+  else if (!p.bought) p.boughtAt = null;
+
+  save();
+  closeSheets();
+  renderGiftPeople();
+  renderTransferUI();
+  toast("🎁 Recipient updated");
+};
+$("egDelete").onclick = () => {
+  if (!editingGiftPersonId || !state) return;
+  const p = (state.giftPeople || []).find(x => x.id === editingGiftPersonId);
+  if (!p || !confirm(`Remove ${p.name} from your gift list?`)) return;
+  state.giftPeople = state.giftPeople.filter(x => x.id !== editingGiftPersonId);
+  save();
+  closeSheets();
+  renderGiftPeople();
+  renderTransferUI();
+  toast("🗑 Recipient removed");
+};
+
+/* =========================================================
+   Transfer & Sync Tabs (Budget, Bought, To-Buy)
+   ========================================================= */
+let qrLib = null;
+function loadQrLib() {
+  if (window.qrcode) return Promise.resolve();
+  if (!qrLib) qrLib = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js";
+    s.onload = res;
+    s.onerror = () => {
+      const s2 = document.createElement("script");
+      s2.src = "https://unpkg.com/qrcode-generator@1.4.4/qrcode.js";
+      s2.onload = res;
+      s2.onerror = () => { qrLib = null; rej(new Error("offline")); };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+  });
+  return qrLib;
+}
+
+function generateTransferData() {
+  if (!state) return null;
+  const incBudget = $("xferTabBudget")?.checked ?? true;
+  const incBought = $("xferTabSpend")?.checked ?? true;
+  const incToBuy = $("xferTabToBuy")?.checked ?? true;
+  const incGifts = $("xferTabGifts")?.checked ?? true;
+
+  if (!incBudget && !incBought && !incToBuy && !incGifts) return null;
+
+  const payload = {
+    app: "HolidayMoney",
+    v: 2,
+    tripName: state.tripName || "Holiday",
+    cur: state.displayCurrency,
+    spendCur: state.spendCurrency,
+    tz: state.timeZone,
+    tabs: {}
+  };
+
+  if (incBudget) {
+    payload.tabs.budget = {
+      funds: (state.funds || []).map(f => ({
+        id: f.id, label: f.label, amount: f.amount, currency: f.currency, groupId: f.groupId || "", date: f.date
+      })),
+      fundGroups: (state.fundGroups || []).map(g => ({ id: g.id, name: g.name }))
+    };
+  }
+
+  if (incBought) {
+    payload.tabs.bought = {
+      expenses: (state.expenses || []).map(e => ({
+        id: e.id, desc: e.desc, amount: e.amount, currency: e.currency, category: e.category,
+        groupId: e.groupId || "", date: e.date, qty: e.qty, unitPrice: e.unitPrice, barcode: e.barcode, tz: e.tz
+      })),
+      groups: (state.groups || []).map(g => ({ id: g.id, name: g.name }))
+    };
+  }
+
+  if (incToBuy) {
+    payload.tabs.tobuy = {
+      toBuy: (state.toBuy || []).map(b => ({
+        id: b.id, name: b.name, qty: b.qty, price: b.price, currency: b.currency, cat: b.cat, ticked: !!b.ticked, created: b.created
+      }))
+    };
+  }
+
+  if (incGifts) {
+    payload.tabs.gifts = {
+      giftPeople: (state.giftPeople || []).map(p => ({
+        id: p.id, name: p.name, idea: p.idea, budget: p.budget, currency: p.currency, bought: !!p.bought, boughtAt: p.boughtAt, created: p.created
+      }))
+    };
+  }
+
+  return payload;
+}
+
+function encodeTransferCode(payload) {
+  const json = JSON.stringify(payload);
+  try {
+    return "HM2:" + btoa(unescape(encodeURIComponent(json)));
+  } catch {
+    return json;
+  }
+}
+
+function decodeTransferCode(str) {
+  if (!str) return null;
+  str = str.trim();
+  try {
+    if (str.startsWith("HM2:")) {
+      const b64 = str.slice(4).trim();
+      const json = decodeURIComponent(escape(atob(b64)));
+      return JSON.parse(json);
+    }
+    if (str.startsWith("HM1:")) {
+      const b64 = str.slice(4).trim();
+      const json = decodeURIComponent(escape(atob(b64)));
+      return JSON.parse(json);
+    }
+    if (str.startsWith("{")) {
+      return JSON.parse(str);
+    }
+    const json = decodeURIComponent(escape(atob(str)));
+    return JSON.parse(json);
+  } catch {
+    try { return JSON.parse(str); } catch { return null; }
+  }
+}
+
+let latestTransferCode = "";
+
+async function renderTransferQR(codeStr) {
+  latestTransferCode = codeStr || "";
+  const wrap = $("transferQrCode");
+  if (!wrap) return;
+  if (!codeStr) {
+    wrap.innerHTML = `<p class="muted" style="margin:20px 0;font-size:.85rem">Select at least one tab to generate QR</p>`;
+    if ($("enlargeQrBtn")) $("enlargeQrBtn").style.display = "none";
+    return;
+  }
+  if ($("enlargeQrBtn")) $("enlargeQrBtn").style.display = "inline-block";
+
+  try {
+    await loadQrLib();
+    if (window.qrcode) {
+      const qr = window.qrcode(0, "L");
+      qr.addData(codeStr);
+      qr.make();
+      wrap.innerHTML = qr.createSvgTag(4, 4);
+      const svg = wrap.querySelector("svg");
+      if (svg) {
+        svg.style.width = "100%";
+        svg.style.maxWidth = "200px";
+        svg.style.height = "auto";
+        svg.style.display = "block";
+        svg.style.margin = "0 auto";
+        svg.style.cursor = "pointer";
+      }
+      $("transferQrMsg").textContent = "Tap QR to enlarge • Scan with other phone";
+      return;
+    }
+  } catch (err) {
+    console.warn("QR generation notice:", err);
+  }
+  wrap.innerHTML = `<div style="padding:14px;color:var(--muted);font-size:.82rem">
+    📱 QR requires internet the first time to load generator.<br>
+    You can still copy & paste the <b>Transfer Code</b> below!
+  </div>`;
+  $("transferQrMsg").textContent = "Copy the code below to transfer";
+  if ($("enlargeQrBtn")) $("enlargeQrBtn").style.display = "none";
+}
+
+function openEnlargedQr() {
+  if (!latestTransferCode) return toast("No QR code to enlarge");
+  try {
+    if (!window.qrcode) return toast("QR generator is loading…");
+    const qr = window.qrcode(0, "L");
+    qr.addData(latestTransferCode);
+    qr.make();
+    const content = $("qrViewerContent");
+    if (!content) return;
+    content.innerHTML = qr.createSvgTag(8, 6);
+    const svg = content.querySelector("svg");
+    if (svg) {
+      svg.style.width = "100%";
+      svg.style.maxWidth = "min(78vw, 300px)";
+      svg.style.height = "auto";
+      svg.style.display = "block";
+      svg.style.margin = "0 auto";
+    }
+    $("qrViewerTitle").textContent = state?.tripName ? `${state.tripName} – QR Code` : "Transfer QR Code";
+    $("qrViewer").classList.add("open");
+  } catch (e) {
+    console.error("Enlarge QR error:", e);
+    toast("Couldn't enlarge QR code");
+  }
+}
+
+$("qrViewer").onclick = e => {
+  if (e.target === $("qrViewer") || e.target.closest("#qrCloseBtn") || e.target.closest("#qrDoneBtn") || e.target.classList.contains("scan-msg")) {
+    $("qrViewer").classList.remove("open");
+  }
+};
+
+async function renderTransferUI() {
+  if (!state) return;
+  const payload = generateTransferData();
+  if (!payload) {
+    if ($("transferCodeOut")) $("transferCodeOut").value = "";
+    if ($("transferQrCode")) $("transferQrCode").innerHTML = `<div class="muted" style="padding:14px;font-size:.82rem">Select at least one tab above</div>`;
+    if ($("transferSummary")) $("transferSummary").textContent = "No tabs selected";
+    return;
+  }
+
+  const codeStr = encodeTransferCode(payload);
+  if ($("transferCodeOut")) $("transferCodeOut").value = codeStr;
+
+  const bCount = payload.tabs.budget ? payload.tabs.budget.funds.length : 0;
+  const sCount = payload.tabs.bought ? payload.tabs.bought.expenses.length : 0;
+  const tCount = payload.tabs.tobuy ? payload.tabs.tobuy.toBuy.length : 0;
+  const gCount = payload.tabs.gifts ? payload.tabs.gifts.giftPeople.length : 0;
+  const parts = [];
+  if (payload.tabs.budget) parts.push(`💰 ${bCount} budget item${bCount === 1 ? "" : "s"}`);
+  if (payload.tabs.bought) parts.push(`🛍️ ${sCount} purchase${sCount === 1 ? "" : "s"}`);
+  if (payload.tabs.tobuy) parts.push(`📝 ${tCount} to-buy item${tCount === 1 ? "" : "s"}`);
+  if (payload.tabs.gifts) parts.push(`🎁 ${gCount} gift recipient${gCount === 1 ? "" : "s"}`);
+  if ($("transferSummary")) $("transferSummary").textContent = `Ready to share: ${parts.join(" • ")}`;
+
+  await renderTransferQR(codeStr);
+}
+
+function handleTransferCode(rawCode) {
+  if (!rawCode || !rawCode.trim()) return toast("Please paste or scan a transfer code");
+  const data = decodeTransferCode(rawCode);
+  if (!data || !data.tabs || typeof data.tabs !== "object") {
+    return toast("⚠️ Invalid transfer code format");
+  }
+
+  const tabs = data.tabs;
+  const bFunds = tabs.budget?.funds || [];
+  const sExp = tabs.bought?.expenses || [];
+  const tItems = tabs.tobuy?.toBuy || [];
+  const gPeople = tabs.gifts?.giftPeople || [];
+
+  const tabList = [];
+  if (tabs.budget) tabList.push(`💰 Budget (${bFunds.length})`);
+  if (tabs.bought) tabList.push(`🛍️ Bought (${sExp.length})`);
+  if (tabs.tobuy) tabList.push(`📝 To-Buy (${tItems.length})`);
+  if (tabs.gifts) tabList.push(`🎁 Others (${gPeople.length})`);
+
+  if (!tabList.length) return toast("⚠️ This transfer code has no tab data");
+
+  const fromTrip = data.tripName || "Holiday";
+  const title = `📲 Transfer: ${fromTrip}`;
+  const options = [];
+
+  if (state) {
+    options.push({
+      label: `🏷️ Merge & tag as '📥 Imported'`,
+      onClick: () => applyTransferMerge(data, true)
+    });
+    options.push({
+      label: `➕ Merge without marker`,
+      onClick: () => applyTransferMerge(data, false)
+    });
+    options.push({
+      label: `🔄 Replace matching tabs in current trip`,
+      danger: true,
+      onClick: () => {
+        if (!confirm(`Replace data in matching tabs with data from "${fromTrip}"?`)) return;
+        applyTransferReplace(data);
+      }
+    });
+  }
+
+  options.push({
+    label: `📁 Create new trip from this transfer`,
+    onClick: () => applyTransferNewTrip(data)
+  });
+
+  actionSheet(title, options);
+}
+
+function applyTransferMerge(data, markAsImported = false) {
+  if (!state) return;
+  const tabs = data.tabs || {};
+  let addedCount = 0;
+
+  if (tabs.budget) {
+    state.funds = state.funds || [];
+    state.fundGroups = state.fundGroups || [];
+
+    const groupMap = {};
+    (tabs.budget.fundGroups || []).forEach(inG => {
+      const existing = state.fundGroups.find(g => g.name.toLowerCase() === inG.name.toLowerCase());
+      if (existing) {
+        groupMap[inG.id] = existing.id;
+      } else {
+        const newG = { id: uid(), name: inG.name };
+        state.fundGroups.push(newG);
+        groupMap[inG.id] = newG.id;
+      }
+    });
+
+    (tabs.budget.funds || []).forEach(f => {
+      const gid = groupMap[f.groupId] !== undefined ? groupMap[f.groupId] : "";
+      const exists = state.funds.some(x => x.id === f.id);
+      state.funds.push({
+        id: exists ? uid() : f.id,
+        label: f.label || "Holiday money",
+        amount: Number(f.amount) || 0,
+        currency: f.currency || state.displayCurrency,
+        groupId: gid,
+        date: f.date || Date.now(),
+        imported: !!markAsImported
+      });
+      addedCount++;
+    });
+  }
+
+  if (tabs.bought) {
+    state.expenses = state.expenses || [];
+    state.groups = state.groups || [];
+
+    const groupMap = {};
+    (tabs.bought.groups || []).forEach(inG => {
+      const existing = state.groups.find(g => g.name.toLowerCase() === inG.name.toLowerCase());
+      if (existing) {
+        groupMap[inG.id] = existing.id;
+      } else {
+        const newG = { id: uid(), name: inG.name };
+        state.groups.push(newG);
+        groupMap[inG.id] = newG.id;
+      }
+    });
+
+    (tabs.bought.expenses || []).forEach(e => {
+      const gid = groupMap[e.groupId] !== undefined ? groupMap[e.groupId] : "";
+      const exists = state.expenses.some(x => x.id === e.id);
+      state.expenses.unshift({
+        id: exists ? uid() : e.id,
+        desc: e.desc || "Purchase",
+        amount: Number(e.amount) || 0,
+        currency: e.currency || state.spendCurrency || state.displayCurrency,
+        category: e.category || "other",
+        groupId: gid,
+        date: e.date || Date.now(),
+        qty: e.qty || 1,
+        unitPrice: e.unitPrice,
+        barcode: e.barcode || null,
+        tz: e.tz || state.timeZone || "local",
+        imported: !!markAsImported
+      });
+      addedCount++;
+    });
+  }
+
+  if (tabs.tobuy) {
+    state.toBuy = state.toBuy || [];
+    (tabs.tobuy.toBuy || []).forEach(b => {
+      const exists = state.toBuy.some(x => x.id === b.id || (x.name.toLowerCase() === b.name.toLowerCase() && !x.ticked && !b.ticked));
+      if (!exists) {
+        state.toBuy.push({
+          id: uid(),
+          name: b.name || "Item",
+          qty: b.qty || 1,
+          price: Number(b.price) || 0,
+          currency: b.currency || state.spendCurrency || state.displayCurrency,
+          cat: b.cat || "shopping",
+          ticked: !!b.ticked,
+          created: b.created || Date.now(),
+          imported: !!markAsImported
+        });
+        addedCount++;
+      }
+    });
+  }
+
+  if (tabs.gifts) {
+    state.giftPeople = state.giftPeople || [];
+    (tabs.gifts.giftPeople || []).forEach(p => {
+      const exists = state.giftPeople.some(x => x.id === p.id || (x.name.toLowerCase() === p.name.toLowerCase()));
+      if (!exists) {
+        state.giftPeople.push({
+          id: uid(),
+          name: p.name || "Friend",
+          idea: p.idea || "",
+          budget: Number(p.budget) || 0,
+          currency: p.currency || state.spendCurrency || state.displayCurrency,
+          bought: !!p.bought,
+          boughtAt: p.boughtAt || null,
+          created: p.created || Date.now(),
+          imported: !!markAsImported
+        });
+        addedCount++;
+      }
+    });
+  }
+
+  save();
+  renderAll();
+  renderTransferUI();
+  toast(`✅ Transferred ${addedCount} item(s) into "${state.tripName || "Holiday"}"`);
+}
+
+function applyTransferReplace(data) {
+  if (!state) return;
+  const tabs = data.tabs || {};
+
+  if (tabs.budget) {
+    state.funds = (tabs.budget.funds || []).map(f => ({ ...f, imported: false }));
+    state.fundGroups = (tabs.budget.fundGroups || []).map(g => ({ ...g }));
+  }
+  if (tabs.bought) {
+    state.expenses = (tabs.bought.expenses || []).map(e => ({ ...e, imported: false }));
+    state.groups = (tabs.bought.groups || []).map(g => ({ ...g }));
+  }
+  if (tabs.tobuy) {
+    state.toBuy = (tabs.tobuy.toBuy || []).map(b => ({ ...b, imported: false }));
+  }
+  if (tabs.gifts) {
+    state.giftPeople = (tabs.gifts.giftPeople || []).map(p => ({ ...p, imported: false }));
+  }
+
+  save();
+  renderAll();
+  renderTransferUI();
+  toast("✅ Tabs updated from transfer code!");
+}
+
+function applyTransferNewTrip(data) {
+  const tabs = data.tabs || {};
+  const newTrip = {
+    ...defaultTrip(),
+    id: uid(),
+    tripName: data.tripName ? `${data.tripName} (Copy)` : "Transferred Trip",
+    displayCurrency: data.cur || "AUD",
+    spendCurrency: data.spendCur || "USD",
+    timeZone: data.tz || "local",
+    funds: (tabs.budget?.funds || []).map(f => ({ ...f, imported: false })),
+    fundGroups: (tabs.budget?.fundGroups || []).map(g => ({ ...g })),
+    expenses: (tabs.bought?.expenses || []).map(e => ({ ...e, imported: false })),
+    groups: (tabs.bought?.groups || []).map(g => ({ ...g })),
+    toBuy: (tabs.tobuy?.toBuy || []).map(b => ({ ...b, imported: false })),
+    giftPeople: (tabs.gifts?.giftPeople || []).map(p => ({ ...p, imported: false })),
+    created: Date.now()
+  };
+  app.trips.push(newTrip);
+  openTrip(newTrip.id);
+  toast(`🎉 Created new trip "${newTrip.tripName}" from transfer!`);
+}
+
+$("genTransferBtn").onclick = () => renderTransferUI();
+$("scanQrTransferBtn").onclick = () => openScanner("transfer");
+$("importTransferBtn").onclick = () => {
+  const code = $("transferCodeIn").value.trim();
+  if (!code) return toast("Please paste or scan a transfer code first");
+  handleTransferCode(code);
+};
+$("pasteTransferBtn").onclick = async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      $("transferCodeIn").value = text.trim();
+      handleTransferCode(text.trim());
+    } else {
+      toast("Clipboard is empty");
+    }
+  } catch {
+    $("transferCodeIn").focus();
+    toast("Tap and hold in the box to paste");
+  }
+};
+$("copyTransferBtn").onclick = async () => {
+  const code = $("transferCodeOut").value.trim();
+  if (!code) return toast("No code to copy");
+  try {
+    await navigator.clipboard.writeText(code);
+    toast("📋 Transfer code copied to clipboard!");
+  } catch {
+    $("transferCodeOut").select();
+    document.execCommand("copy");
+    toast("📋 Transfer code copied!");
+  }
+};
+["xferTabBudget", "xferTabSpend", "xferTabToBuy", "xferTabGifts"].forEach(id => {
+  const el = $(id);
+  if (el) {
+    el.onchange = e => {
+      e.target.closest(".check-chip")?.classList.toggle("on", e.target.checked);
+      renderTransferUI();
+    };
+  }
+});
+
+$("transferQrWrap").onclick = e => {
+  if (e.target.closest("#copyTransferBtn") || e.target.closest("#genTransferBtn")) return;
+  openEnlargedQr();
+};
+if ($("enlargeQrBtn")) {
+  $("enlargeQrBtn").onclick = e => {
+    e.stopPropagation();
+    openEnlargedQr();
+  };
+}
+
+if ($("clearAllTagsBtn")) $("clearAllTagsBtn").onclick = clearAllImportedTags;
+
+document.addEventListener("click", e => {
+  const tag = e.target.closest(".badge-imported");
+  if (tag) {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteImportedTag(tag.dataset.tagType, tag.dataset.tagId);
+  }
+}, true);
+
+/* =========================================================
    Start up
    ========================================================= */
 async function init() {
@@ -2797,6 +4000,7 @@ async function init() {
   app.currentTripId = null;
   renderTheme();
   renderAll();
+  renderTransferUI();
   tick();
   setInterval(tick, 1000);
   if (await PhotoDB.open()) { await PhotoDB.loadAll(); renderAll(); }
