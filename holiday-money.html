@@ -829,7 +829,7 @@
           <button class="btn alt" id="scanQrTransferBtn" type="button" style="margin:0 0 10px;padding:12px">📷 Scan QR code with camera</button>
 
           <label for="transferCodeIn">Or paste transfer code:</label>
-          <textarea id="transferCodeIn" rows="2" placeholder="Paste HM2:... transfer code here" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:monospace;font-size:.8rem;resize:vertical"></textarea>
+          <textarea id="transferCodeIn" rows="2" placeholder="Paste transfer code (HM3:... or HM2:...) here" style="width:100%;padding:10px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:monospace;font-size:.8rem;resize:vertical"></textarea>
 
           <div class="row" style="margin-top:8px">
             <button class="btn" id="importTransferBtn" type="button" style="margin:0;padding:12px 8px">📥 Import data</button>
@@ -2439,7 +2439,7 @@ function viewPhoto(src) { $("photoViewer").querySelector("img").src = src; $("ph
 let scanner = null, scanLib = null, scanHandled = false, scannerMode = "barcode";
 function isTransferCode(str) {
   if (!str) return false;
-  return str.startsWith("HM2:") || str.startsWith("HM1:") || str.includes('"HolidayMoney"') || (str.startsWith("{") && str.includes('"tabs"'));
+  return str.startsWith("HM3:") || str.startsWith("HM3U:") || str.startsWith("HM2:") || str.startsWith("HM1:") || str.includes('"HolidayMoney"') || (str.startsWith("{") && str.includes('"tabs"'));
 }
 function loadScanLib() {
   if (window.Html5Qrcode) return Promise.resolve();
@@ -2514,7 +2514,7 @@ $("scanClose").onclick = closeScanner;
 $("scanManual").onclick = async () => {
   await closeScanner();
   if (scannerMode === "transfer") {
-    const code = prompt("Paste or type the transfer code (HM2:...):");
+    const code = prompt("Paste or type the transfer code (HM3:... or HM2:...):");
     if (code && code.trim()) handleTransferCode(code.trim());
   } else {
     const code = prompt("Type the barcode number");
@@ -3572,19 +3572,246 @@ function generateTransferData() {
   return payload;
 }
 
-function encodeTransferCode(payload) {
-  const json = JSON.stringify(payload);
+function uint8ToBase64(bytes) {
+  let bin = "";
+  const len = bytes.byteLength;
+  const chunk = 8192;
+  for (let i = 0; i < len; i += chunk) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, len)));
+  }
+  return btoa(bin);
+}
+
+function base64ToUint8(b64) {
+  const bin = atob(b64);
+  const len = bin.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+async function deflateString(str) {
+  if (typeof CompressionStream !== "undefined") {
+    try {
+      const stream = new Blob([new TextEncoder().encode(str)]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+      const buf = await new Response(stream).arrayBuffer();
+      return uint8ToBase64(new Uint8Array(buf));
+    } catch (e) {
+      console.warn("Deflate failed:", e);
+    }
+  }
+  return null;
+}
+
+async function inflateString(b64) {
+  if (typeof DecompressionStream !== "undefined") {
+    try {
+      const bytes = base64ToUint8(b64);
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      return await new Response(stream).text();
+    } catch (e) {
+      console.warn("Inflate failed:", e);
+    }
+  }
+  return null;
+}
+
+function packCompactTransfer(payload) {
+  const cur = payload.cur || "AUD";
+  const spendCur = payload.spendCur || cur;
+  const tz = payload.tz || "local";
+  const out = {
+    t: payload.tripName || "Holiday",
+    c: cur,
+    s: spendCur,
+    z: tz,
+    b: null,
+    x: null,
+    w: null,
+    g: null
+  };
+  const tabs = payload.tabs || {};
+
+  if (tabs.budget) {
+    const fList = (tabs.budget.funds || []).map(f => [
+      f.id,
+      f.label || "",
+      f.amount,
+      f.currency === cur ? "" : (f.currency || ""),
+      f.groupId || "",
+      f.date || ""
+    ]);
+    const gList = (tabs.budget.fundGroups || []).map(g => [g.id, g.name]);
+    out.b = [fList, gList];
+  }
+
+  if (tabs.bought) {
+    const eList = (tabs.bought.expenses || []).map(e => [
+      e.id,
+      e.desc || "",
+      e.amount,
+      e.currency === spendCur ? "" : (e.currency || ""),
+      e.category || "",
+      e.groupId || "",
+      e.date || "",
+      (e.qty && e.qty !== 1) ? e.qty : "",
+      (e.unitPrice !== undefined && e.unitPrice !== null && e.unitPrice !== e.amount) ? e.unitPrice : "",
+      e.barcode || "",
+      (e.tz && e.tz !== tz) ? e.tz : ""
+    ]);
+    const gList = (tabs.bought.groups || []).map(g => [g.id, g.name]);
+    out.x = [eList, gList];
+  }
+
+  if (tabs.tobuy) {
+    out.w = (tabs.tobuy.toBuy || []).map(b => [
+      b.id,
+      b.name || "",
+      (b.qty && b.qty !== 1) ? b.qty : "",
+      b.price || 0,
+      b.currency === spendCur ? "" : (b.currency || ""),
+      b.cat || "",
+      b.ticked ? 1 : 0,
+      b.created || 0
+    ]);
+  }
+
+  if (tabs.gifts) {
+    out.g = (tabs.gifts.giftPeople || []).map(p => [
+      p.id,
+      p.name || "",
+      p.idea || "",
+      p.budget || 0,
+      p.currency === cur ? "" : (p.currency || ""),
+      p.bought ? 1 : 0,
+      p.boughtAt || "",
+      p.created || 0
+    ]);
+  }
+
+  return out;
+}
+
+function unpackCompactTransfer(out) {
+  const cur = out.c || "AUD";
+  const spendCur = out.s || cur;
+  const tz = out.z || "local";
+  const payload = {
+    app: "HolidayMoney",
+    v: 3,
+    tripName: out.t || "Holiday",
+    cur: cur,
+    spendCur: spendCur,
+    tz: tz,
+    tabs: {}
+  };
+
+  if (out.b) {
+    const [fList, gList] = out.b;
+    payload.tabs.budget = {
+      funds: (fList || []).map(row => ({
+        id: row[0],
+        label: row[1] || "Holiday money",
+        amount: Number(row[2]) || 0,
+        currency: row[3] || cur,
+        groupId: row[4] || "",
+        date: row[5] || ""
+      })),
+      fundGroups: (gList || []).map(row => ({ id: row[0], name: row[1] }))
+    };
+  }
+
+  if (out.x) {
+    const [eList, gList] = out.x;
+    payload.tabs.bought = {
+      expenses: (eList || []).map(row => ({
+        id: row[0],
+        desc: row[1] || "Purchase",
+        amount: Number(row[2]) || 0,
+        currency: row[3] || spendCur,
+        category: row[4] || "other",
+        groupId: row[5] || "",
+        date: row[6] || "",
+        qty: row[7] ? Number(row[7]) : 1,
+        unitPrice: (row[8] !== "" && row[8] !== null && row[8] !== undefined) ? Number(row[8]) : (Number(row[2]) || 0),
+        barcode: row[9] || "",
+        tz: row[10] || tz
+      })),
+      groups: (gList || []).map(row => ({ id: row[0], name: row[1] }))
+    };
+  }
+
+  if (out.w) {
+    payload.tabs.tobuy = {
+      toBuy: (out.w || []).map(row => ({
+        id: row[0],
+        name: row[1],
+        qty: row[2] ? Number(row[2]) : 1,
+        price: Number(row[3]) || 0,
+        currency: row[4] || spendCur,
+        cat: row[5] || "shopping",
+        ticked: row[6] === 1,
+        created: row[7] ? Number(row[7]) : Date.now()
+      }))
+    };
+  }
+
+  if (out.g) {
+    payload.tabs.gifts = {
+      giftPeople: (out.g || []).map(row => ({
+        id: row[0],
+        name: row[1],
+        idea: row[2] || "",
+        budget: Number(row[3]) || 0,
+        currency: row[4] || cur,
+        bought: row[5] === 1,
+        boughtAt: row[6] ? Number(row[6]) : null,
+        created: row[7] ? Number(row[7]) : Date.now()
+      }))
+    };
+  }
+
+  return payload;
+}
+
+async function encodeTransferCode(payload) {
   try {
-    return "HM2:" + btoa(unescape(encodeURIComponent(json)));
-  } catch {
-    return json;
+    const compact = packCompactTransfer(payload);
+    const compactJson = JSON.stringify(compact);
+    const deflatedB64 = await deflateString(compactJson);
+    if (deflatedB64) {
+      return "HM3:" + deflatedB64;
+    }
+    return "HM3U:" + btoa(unescape(encodeURIComponent(compactJson)));
+  } catch (err) {
+    console.warn("Compression encode error, falling back:", err);
+    try {
+      const json = JSON.stringify(payload);
+      return "HM2:" + btoa(unescape(encodeURIComponent(json)));
+    } catch {
+      return JSON.stringify(payload);
+    }
   }
 }
 
-function decodeTransferCode(str) {
+async function decodeTransferCode(str) {
   if (!str) return null;
   str = str.trim();
   try {
+    if (str.startsWith("HM3:")) {
+      const b64 = str.slice(4).trim();
+      const inflated = await inflateString(b64);
+      if (inflated) {
+        const compact = JSON.parse(inflated);
+        return unpackCompactTransfer(compact);
+      }
+    }
+    if (str.startsWith("HM3U:")) {
+      const b64 = str.slice(5).trim();
+      const json = decodeURIComponent(escape(atob(b64)));
+      const compact = JSON.parse(json);
+      return unpackCompactTransfer(compact);
+    }
     if (str.startsWith("HM2:")) {
       const b64 = str.slice(4).trim();
       const json = decodeURIComponent(escape(atob(b64)));
@@ -3596,11 +3823,20 @@ function decodeTransferCode(str) {
       return JSON.parse(json);
     }
     if (str.startsWith("{")) {
-      return JSON.parse(str);
+      const parsed = JSON.parse(str);
+      if (parsed.t && parsed.c && (parsed.b || parsed.x || parsed.w || parsed.g)) {
+        return unpackCompactTransfer(parsed);
+      }
+      return parsed;
     }
     const json = decodeURIComponent(escape(atob(str)));
-    return JSON.parse(json);
-  } catch {
+    const parsed = JSON.parse(json);
+    if (parsed.t && parsed.c && (parsed.b || parsed.x || parsed.w || parsed.g)) {
+      return unpackCompactTransfer(parsed);
+    }
+    return parsed;
+  } catch (e) {
+    console.error("Decode transfer code error:", e);
     try { return JSON.parse(str); } catch { return null; }
   }
 }
@@ -3690,7 +3926,7 @@ async function renderTransferUI() {
     return;
   }
 
-  const codeStr = encodeTransferCode(payload);
+  const codeStr = await encodeTransferCode(payload);
   if ($("transferCodeOut")) $("transferCodeOut").value = codeStr;
 
   const bCount = payload.tabs.budget ? payload.tabs.budget.funds.length : 0;
@@ -3707,9 +3943,9 @@ async function renderTransferUI() {
   await renderTransferQR(codeStr);
 }
 
-function handleTransferCode(rawCode) {
+async function handleTransferCode(rawCode) {
   if (!rawCode || !rawCode.trim()) return toast("Please paste or scan a transfer code");
-  const data = decodeTransferCode(rawCode);
+  const data = await decodeTransferCode(rawCode);
   if (!data || !data.tabs || typeof data.tabs !== "object") {
     return toast("⚠️ Invalid transfer code format");
   }
